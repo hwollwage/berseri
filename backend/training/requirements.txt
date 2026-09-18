@@ -1,0 +1,5 @@
+
+
+
+
+# jalanin "pip freeze" buat dependencies

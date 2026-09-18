@@ -1,7 +1,21 @@
+import 'package:berseri/features/camera/camera_page.dart';
 import 'package:flutter/material.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  int selectedIndex = 0;
+
+  final List<Widget> pages = const [
+    CameraPage(),
+    // DiagnosticPage(),
+    // RoutinePage(),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -11,15 +25,25 @@ class HomePage extends StatelessWidget {
         backgroundColor: Colors.amberAccent,
       ),
 
-      body: Center(
-        child: Column(
-          mainAxisAlignment: .center,
-          children: [
-            Text('INI CUMA PLACEHOLDER'),
+      body: pages[selectedIndex],
 
-            const SizedBox(height: 20,),
-          ],
-        ),
+      bottomNavigationBar: BottomNavigationBar(
+        items: [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.camera), 
+            label: "Camera"
+          ),
+
+          BottomNavigationBarItem(
+            icon: Icon(Icons.plus_one), 
+            label: "Diagnostic"
+          ),
+
+          BottomNavigationBarItem(
+            icon: Icon(Icons.plus_one), 
+            label: "Routine"
+          ),
+        ],
       ),
     );
   }
