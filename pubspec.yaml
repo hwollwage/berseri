@@ -42,6 +42,8 @@ dependencies:
   sqflite: ^2.4.4
   path: ^1.9.1
   dio: ^5.11.1
+  google_fonts: ^8.2.1
+  font_awesome_flutter: ^11.0.0
 
 dev_dependencies:
   flutter_test:
@@ -64,11 +66,16 @@ dependency_overrides:
 
 # The following section is specific to Flutter packages.
 flutter:
-
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+  # fonts:
+  #   - family: Plus Jakarta Sans
+  #     fonts:
+  #       - asset: assets/fonts/PlusJakartaSans-Regular.ttf
+  #       - asset: assets/fonts/PlusJakartaSans-Bold.ttf
+  #         weight: 700
 
   # To add assets to your application, add an assets section, like this:
   # assets:

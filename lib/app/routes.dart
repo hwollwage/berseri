@@ -2,20 +2,21 @@ import 'package:berseri/features/auth/login_page.dart';
 import 'package:berseri/features/auth/register_page.dart';
 import 'package:berseri/features/camera/camera_page.dart';
 import 'package:berseri/features/home/home_page.dart';
+import 'package:berseri/features/diagnosis/diagnosis_page.dart';
+import 'package:berseri/features/profile/profile_page.dart';
+import 'package:berseri/features/routine/routine_page.dart';
 import 'package:go_router/go_router.dart';
 
 final router = GoRouter(
   initialLocation: '/',
   routes: [
 
-    // === HOME PAGE
     GoRoute(
       path: '/',
       name: 'home',
       builder: (context, state) => const HomePage(),
     ),
 
-    // === AUTH PAGE
     GoRoute(
       path: '/auth',
       name: 'auth',
@@ -41,27 +42,28 @@ final router = GoRouter(
     ),
 
     GoRoute(
+      path: '/profile',
+      name: 'profile',
+      builder: (context, state) => ProfilePage(),
+    ),
+
+    GoRoute(
       path: '/camera',
-      name: 'cameras',
+      name: 'camera',
       builder: (context, state) => const CameraPage(),
-    )
-
-    // END AUTH PAGE ===
-
-
-
-    // GoRoute(
-    //   path: '/camera',
-    //   name: 'camera',
-    //   builder: (context, state) => const CameraPage(),
-    // ),
-
-    // GoRoute(
-    //   path: '/diagnosis',
-    //   name: 'diagnosis',
-    //   builder: (context, state) => const DiagosisPage(),
-    // ),
-
+    ),
+    
+    GoRoute(
+      path: '/diagnosis',
+      name: 'diagnosis',
+      builder: (context, state) => const DiagnosisPage(),
+    ),
+    
+    GoRoute(
+      path: '/routine',
+      name: 'routine',
+      builder: (context, state) => const RoutinePage(),
+    ),
 
     // lanjutin routenya...
   ],
