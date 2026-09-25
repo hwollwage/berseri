@@ -70,7 +70,10 @@ class _HomePageState extends ConsumerState<HomePage> {
           });
         },
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.camera), label: "Scan"),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.camera_alt), 
+            label: "Scan"
+          ),
           BottomNavigationBarItem(
             icon: FaIcon(FontAwesomeIcons.heartPulse),
             label: "Diagnostic",

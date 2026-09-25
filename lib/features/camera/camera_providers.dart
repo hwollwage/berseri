@@ -1,122 +1,137 @@
+import 'dart:io';
+
 import 'package:camera/camera.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
-mixin CameraLogic<T extends StatefulWidget> on State<T> {
-  // declare object camera dan xfile
-  CameraController? controller;
-  XFile? imageFile;
+import 'package:berseri/features/classification/classification_provider.dart';
 
-  // list camera yg ada & pilihan cam (depan / selfie)
-  List<CameraDescription> cameras = [];
-  int selectedCameraIndex = 0;
+class CameraState {
+  final CameraController controller;
+  final List<CameraDescription> cameras;
+  final int selectedIndex;
+  final bool isFlashOn;
+  final XFile? imageFile;
 
-  // ini buat set flash camera e
-  bool isFlashOn = false;
+  const CameraState({
+    required this.controller,
+    required this.cameras,
+    required this.selectedIndex,
+    this.isFlashOn = false,
+    this.imageFile,
+  });
+
+  bool get canUseFlash =>
+      cameras[selectedIndex].lensDirection == CameraLensDirection.back;
+
+  CameraState copyWith({
+    CameraController? controller,
+    int? selectedIndex,
+    bool? isFlashOn,
+    XFile? imageFile,
+    bool clearImage = false,
+  }) {
+    return CameraState(
+      controller: controller ?? this.controller,
+      cameras: cameras,
+      selectedIndex: selectedIndex ?? this.selectedIndex,
+      isFlashOn: isFlashOn ?? this.isFlashOn,
+      imageFile: clearImage ? null : (imageFile ?? this.imageFile),
+    );
+  }
+}
+
+class CameraNotifier extends AsyncNotifier<CameraState> {
+  final ImagePicker _picker = ImagePicker();
 
   @override
-  void initState() {
-    super.initState();
-    setupCamera();
-  }
-
-  Future<void> setupCamera() async {
-    try {
-      cameras = await availableCameras();
-      if (cameras.isNotEmpty) {
-        selectedCameraIndex = 0;
-        initController(cameras[selectedCameraIndex]);
-      }
-    } catch (e) {
-      debugPrint("error setting up camera: $e");
-    }
-  }
-
-  Future<void> initController(CameraDescription cameraDescription) async {
-    if (controller != null) {
-      await controller!.dispose();
+  Future<CameraState> build() async {
+    final cameras = await availableCameras();
+    if (cameras.isEmpty) {
+      throw Exception('Tidak ada kamera yang tersedia');
     }
 
-    controller = CameraController(cameraDescription, ResolutionPreset.veryHigh); // buat ML deteksi resolusi e veryhigh / ultrahigh
-
-    try {
-      isFlashOn = false; // default flash e mati
-      await controller!.initialize();
-
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {});
-    } catch (e) {
-      debugPrint("error init camera: $e");
+    var index = cameras.indexWhere(
+      (c) => c.lensDirection == CameraLensDirection.back,
+    );
+    if (index == -1) {
+      index = 0;
     }
+
+    final controller = await _open(cameras[index]);
+    return CameraState(
+      controller: controller,
+      cameras: cameras,
+      selectedIndex: index,
+    );
   }
 
-  Future<void> switchCamera() async {
-    if (cameras.length < 2) return;
-
-    final current = cameras[selectedCameraIndex].lensDirection;
-    final target = current == CameraLensDirection.front
-        ? CameraLensDirection.back
-        : CameraLensDirection.front;
-
-    final index = cameras.indexWhere((c) => c.lensDirection == target);
-
-    if (index == -1) return;
-
-    selectedCameraIndex = index;
-
-    await initController(cameras[selectedCameraIndex]);
+  Future<CameraController> _open(CameraDescription description) async {
+    final controller = CameraController(
+      description,
+      ResolutionPreset.high,
+      enableAudio: false,
+    );
+    await controller.initialize();
+    ref.onDispose(() => controller.dispose());
+    return controller;
   }
 
   Future<void> toggleFlash() async {
-    final c = controller;
-    if (c == null || !c.value.isInitialized) return;
+    final current = state.asData?.value;
+    if (current == null) return;
 
-    final next = !isFlashOn;
-
-    try {
-      await c.setFlashMode(next ? FlashMode.torch : FlashMode.off);
-
-      if (!mounted) return;
-
-      setState(() => isFlashOn = next);
-    } catch (e) {
-      debugPrint("error set flash: $e");
-    }
+    final next = !current.isFlashOn;
+    await current.controller.setFlashMode(
+      next ? FlashMode.torch : FlashMode.off,
+    );
+    state = AsyncData(current.copyWith(isFlashOn: next));
   }
 
-  Future<void> takePicture() async {
-    final c = controller;
+  Future<void> switchCamera() async {
+    final current = state.asData?.value;
+    if (current == null || current.cameras.length < 2) return;
 
-    if (c == null || !c.value.isInitialized || c.value.isTakingPicture) return;
-
-    try {
-      final img = await c.takePicture();
-
-      if (isFlashOn) {
-        await c.setFlashMode(FlashMode.off);
-      }
-      if (!mounted) return;
-
-      setState(() {
-        imageFile = img;
-        isFlashOn = false;
-      });
-    } catch (e) {
-      debugPrint("error take pic: $e");
-    }
-  }
-
-  Future<void> retakePicture() async {
-    setState(() {
-      imageFile = null;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      await current.controller.dispose();
+      final nextIndex = (current.selectedIndex + 1) % current.cameras.length;
+      final controller = await _open(current.cameras[nextIndex]);
+      return current.copyWith(
+        controller: controller,
+        selectedIndex: nextIndex,
+        isFlashOn: false,
+      );
     });
   }
 
-  @override
-  void dispose() {
-    controller?.dispose();
-    super.dispose();
+  Future<void> takePicture() async {
+    final current = state.asData?.value;
+    if (current == null) return;
+
+    final file = await current.controller.takePicture();
+    state = AsyncData(current.copyWith(imageFile: file));
+    await ref.read(classificationProvider.notifier).classify(File(file.path));
+  }
+
+  Future<void> pickFromGallery() async {
+    final current = state.asData?.value;
+    if (current == null) return;
+
+    final picked = await _picker.pickImage(source: ImageSource.gallery);
+    if (picked == null) return;
+
+    state = AsyncData(current.copyWith(imageFile: picked));
+    await ref.read(classificationProvider.notifier).classify(File(picked.path));
+  }
+
+  void retakePicture() {
+    final current = state.asData?.value;
+    if (current == null) return;
+
+    state = AsyncData(current.copyWith(clearImage: true));
+    ref.read(classificationProvider.notifier).reset();
   }
 }
+
+final cameraProvider = AsyncNotifierProvider<CameraNotifier, CameraState>(CameraNotifier.new);
