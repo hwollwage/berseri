@@ -69,7 +69,7 @@ class CameraNotifier extends AsyncNotifier<CameraState> {
   Future<CameraController> _open(CameraDescription description) async {
     final controller = CameraController(
       description,
-      ResolutionPreset.high,
+      ResolutionPreset.veryHigh,
       enableAudio: false,
     );
     await controller.initialize();
@@ -132,6 +132,12 @@ class CameraNotifier extends AsyncNotifier<CameraState> {
     state = AsyncData(current.copyWith(clearImage: true));
     ref.read(classificationProvider.notifier).reset();
   }
+
+  Future<void> confirmPicture() async {
+    final current = state.asData?.value;
+    if(current?.imageFile == null) return;
+    /// HASIL ML NANTI
+  } 
 }
 
 final cameraProvider = AsyncNotifierProvider<CameraNotifier, CameraState>(CameraNotifier.new);

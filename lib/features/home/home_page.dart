@@ -1,5 +1,5 @@
 import 'package:berseri/app/theme.dart';
-import 'package:berseri/core/components/berseri_logo.dart';
+import 'package:berseri/core/components/custom_logo.dart';
 import 'package:berseri/features/camera/camera_page.dart';
 import 'package:berseri/features/diagnosis/diagnosis_page.dart';
 import 'package:berseri/features/routine/routine_page.dart';
@@ -76,7 +76,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           ),
           BottomNavigationBarItem(
             icon: FaIcon(FontAwesomeIcons.heartPulse),
-            label: "Diagnostic",
+            label: "Diagnosis",
           ),
           BottomNavigationBarItem(
             icon: FaIcon(FontAwesomeIcons.wandMagicSparkles, size: 20),
