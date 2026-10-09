@@ -3,6 +3,9 @@ import 'package:berseri/features/analysis/result_page.dart';
 import 'package:berseri/features/auth/login_page.dart';
 import 'package:berseri/features/auth/register_page.dart';
 import 'package:berseri/features/camera/camera_page.dart';
+import 'package:berseri/features/diagnosis/analysis_loading_page.dart';
+import 'package:berseri/features/diagnosis/analysis_result_model.dart';
+import 'package:berseri/features/diagnosis/analysis_result_page.dart';
 import 'package:berseri/features/diagnosis/diagnosis_page.dart';
 import 'package:berseri/features/home/home_page.dart';
 import 'package:berseri/features/ingredients/ingredient.dart';
@@ -14,6 +17,8 @@ import 'package:berseri/features/splash/splash_page.dart';
 import 'package:go_router/go_router.dart';
 
 final router = GoRouter(
+  // Buat ngetes halamanmu, ubah sementara jadi '/analysis-loading'
+  // atau '/questionnaire'. Balikin ke '/splash' sebelum commit.
   initialLocation: '/splash',
   routes: [
 
@@ -33,7 +38,7 @@ final router = GoRouter(
       path: '/auth',
       name: 'auth',
       redirect: (context, state) {
-        if(state.matchedLocation == '/auth') {
+        if (state.matchedLocation == '/auth') {
           return '/auth/login';
         }
         return null;
@@ -94,6 +99,23 @@ final router = GoRouter(
       name: 'questionnaire',
       builder: (context, state) => const QuestionnairePage(),
     ),
+
+    // ===== route punya wahyu =====
+    GoRoute(
+      path: '/analysis-loading',
+      name: 'analysis-loading',
+      builder: (context, state) =>
+          AnalysisLoadingPage(imagePath: state.extra as String?),
+    ),
+
+    GoRoute(
+      path: '/analysis-result',
+      name: 'analysis-result',
+      builder: (context, state) => AnalysisResultPage(
+        result: (state.extra as AnalysisResult?) ?? AnalysisResult.demo(),
+      ),
+    ),
+    // =============================
 
     GoRoute(
       path: '/ingredient-detail',

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/questionnaire_data.dart';
 import 'widgets/progress_bar.dart';
+import 'package:go_router/go_router.dart';
 
 class SummaryPage extends StatelessWidget {
   final List<int?> answers;
@@ -142,7 +143,7 @@ class SummaryPage extends StatelessWidget {
                           Expanded(
                             child: ElevatedButton(
                               onPressed: () {
-                                // TODO: arahkan ke halaman berikutnya.
+                                context.go('/analysis-loading'); //ini toodokubuat ke halaman  analysis load
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: kOrange,
