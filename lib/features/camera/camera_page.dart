@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:berseri/core/components/custom_sidebutton.dart';
 import 'package:berseri/features/camera/camera_providers.dart';
@@ -6,6 +6,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
 import 'package:awesome_dialog/awesome_dialog.dart';
+import 'package:go_router/go_router.dart';
 
 class CameraPage extends ConsumerWidget {
   const CameraPage({super.key});
@@ -83,7 +84,7 @@ class CameraPage extends ConsumerWidget {
                     )
                   else
                   /// tunjukin foto
-                    Image.file(File(data.imageFile!.path), fit: .cover),
+                    _CapturedPhoto(file: data.imageFile!),
 
                   /// KEEP FACE STEADY BOX (kalo belum take pic text g keluar)
                   if (!hasPhoto)
@@ -171,7 +172,7 @@ class CameraPage extends ConsumerWidget {
                         GestureDetector(
                           onTap: hasPhoto
                               ? notifier.retakePicture
-                              : notifier.takePicture,
+                              : () => context.go('/questionnaire'),
                           child: Container(
                             width: 76,
                             height: 76,
@@ -218,6 +219,60 @@ class CameraPage extends ConsumerWidget {
             ),
           ),
         );
+      },
+    );
+  }
+}
+
+/// The captured or gallery-picked photo, filling the preview area.
+///
+/// `Image.file` is not supported on Flutter Web — it asserts on `kIsWeb` — so
+/// the bytes are read from the [XFile] and drawn with [Image.memory], which
+/// works on web, Android and iOS alike.
+class _CapturedPhoto extends StatefulWidget {
+  const _CapturedPhoto({required this.file});
+
+  final XFile file;
+
+  @override
+  State<_CapturedPhoto> createState() => _CapturedPhotoState();
+}
+
+class _CapturedPhotoState extends State<_CapturedPhoto> {
+  late Future<Uint8List> _bytes;
+
+  @override
+  void initState() {
+    super.initState();
+    _bytes = widget.file.readAsBytes();
+  }
+
+  @override
+  void didUpdateWidget(covariant _CapturedPhoto oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.file.path != widget.file.path) {
+      _bytes = widget.file.readAsBytes();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Uint8List>(
+      future: _bytes,
+      builder: (context, snapshot) {
+        final bytes = snapshot.data;
+        if (bytes == null) {
+          return Center(
+            child: snapshot.hasError
+                ? const Text(
+                    "couldn't read the photo",
+                    style: TextStyle(color: Colors.white),
+                  )
+                : const CircularProgressIndicator(),
+          );
+        }
+
+        return Image.memory(bytes, fit: BoxFit.cover);
       },
     );
   }
