@@ -1,5 +1,6 @@
 // Throwaway preview harness: renders HistoryPage with sample records so the
 // layout can be inspected without running a real scan. Deleted after review.
+import 'package:berseri/app/theme.dart';
 import 'package:berseri/features/analysis/analysis_history_provider.dart';
 import 'package:berseri/features/analysis/analysis_record.dart';
 import 'package:berseri/features/analysis/history_page.dart';
@@ -32,7 +33,7 @@ void main() {
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(colorSchemeSeed: Colors.amber, useMaterial3: true),
+        theme: AppTheme.light,
         home: const HistoryPage(),
       ),
     ),

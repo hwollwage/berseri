@@ -15,7 +15,7 @@ class CameraPage extends ConsumerWidget {
     final cameraState = ref.watch(cameraProvider);
     final notifier = ref.read(cameraProvider.notifier);
 
-    void _showConfirmDialog(BuildContext context, CameraNotifier notifier) {
+    void showConfirmDialog(BuildContext context, CameraNotifier notifier) {
       AwesomeDialog(
         context: context,
         dialogType: .question,
@@ -209,7 +209,7 @@ class CameraPage extends ConsumerWidget {
                       icon: hasPhoto ? Icons.check : Icons.cameraswitch,
                       visible: hasPhoto || data.cameras.length > 1,
                       onTap: hasPhoto
-                          ? () => _showConfirmDialog(context, notifier)
+                          ? () => showConfirmDialog(context, notifier)
                           : notifier.switchCamera,
                     ),
                   ),
