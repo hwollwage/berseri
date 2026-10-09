@@ -10,7 +10,7 @@ The application uses Machine Learning for image-based skin analysis and a rule-b
 
 Choosing suitable skincare ingredients can be difficult because users may not fully understand their skin type or visible skin conditions. BERSERI aims to provide a simple way for users to perform basic skin analysis through a mobile device.
 
-BERSERI combines:
+BERSERI combines these:
 
 - Facial image analysis
 - Skin type classification
