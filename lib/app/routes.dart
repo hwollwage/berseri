@@ -4,11 +4,13 @@ import 'package:berseri/features/camera/camera_page.dart';
 import 'package:berseri/features/home/home_page.dart';
 import 'package:berseri/features/diagnosis/diagnosis_page.dart';
 import 'package:berseri/features/profile/profile_page.dart';
+import 'package:berseri/features/questionnaire/presentation/questionnaire_page.dart';
 import 'package:berseri/features/routine/routine_page.dart';
 import 'package:go_router/go_router.dart';
 
+
 final router = GoRouter(
-  initialLocation: '/',
+  initialLocation: '/questionnaire',
   routes: [
 
     GoRoute(
@@ -63,6 +65,12 @@ final router = GoRouter(
       path: '/routine',
       name: 'routine',
       builder: (context, state) => const RoutinePage(),
+    
+    ),
+      GoRoute(
+      path: '/questionnaire',
+      name: 'questionnaire',
+      builder: (context, state) => const QuestionnairePage(),
     ),
 
     // lanjutin routenya...
