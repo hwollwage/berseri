@@ -4,6 +4,8 @@ import 'package:camera/camera.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'package:berseri/features/analysis/analysis_history_provider.dart';
+import 'package:berseri/features/analysis/analysis_record.dart';
 import 'package:berseri/features/classification/classification_provider.dart';
 
 class CameraState {
@@ -133,11 +135,25 @@ class CameraNotifier extends AsyncNotifier<CameraState> {
     ref.read(classificationProvider.notifier).reset();
   }
 
+  /// Commits the scanned photo: saves the model result into the history and
+  /// clears the preview so the camera is ready for the next scan.
   Future<void> confirmPicture() async {
     final current = state.asData?.value;
-    if(current?.imageFile == null) return;
-    /// HASIL ML NANTI
-  } 
+    final image = current?.imageFile;
+    if (current == null || image == null) return;
+
+    final result = ref.read(classificationProvider).asData?.value;
+    if (result != null) {
+      ref
+          .read(analysisHistoryProvider.notifier)
+          .add(
+            AnalysisRecord.fromClassification(result, photoPath: image.path),
+          );
+    }
+
+    ref.read(classificationProvider.notifier).reset();
+    state = AsyncData(current.copyWith(clearImage: true));
+  }
 }
 
 final cameraProvider = AsyncNotifierProvider<CameraNotifier, CameraState>(CameraNotifier.new);
