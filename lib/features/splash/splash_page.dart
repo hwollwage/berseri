@@ -109,9 +109,9 @@ class _SplashPageState extends State<SplashPage>
 
   void _goNext() {
     if (!mounted) return;
-    // No auth gate yet — land on home. Swap to '/auth/login' once
+    // Front-end only: always land on login. Swap to '/' (home) once
     // session restoration is wired up.
-    context.go('/');
+    context.go('/auth/login');
   }
 
   @override
