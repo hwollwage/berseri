@@ -1,5 +1,5 @@
 import 'package:berseri/core/components/custom_nav_bar.dart';
-import 'package:berseri/features/camera/camera_page.dart';
+import 'package:berseri/features/camera/presentation/pages/camera_page.dart';
 import 'package:berseri/features/home/dashboard_page.dart';
 import 'package:berseri/features/ingredients/ingredients_page.dart';
 import 'package:flutter/material.dart';
