@@ -30,7 +30,7 @@ class ClassificationRepository {
 
 final dioProvider = Provider<Dio>((ref) {
   return Dio(BaseOptions(
-    baseUrl: 'http://localhost:3000 (pokoknya flask servernya)',
+    baseUrl: 'http://localhost:8000',
     connectTimeout: const Duration(seconds: 15),
     receiveTimeout: const Duration(seconds: 15),
   ));
