@@ -2,7 +2,7 @@ import 'package:berseri/features/analysis/history_page.dart';
 import 'package:berseri/features/analysis/result_page.dart';
 import 'package:berseri/features/auth/login_page.dart';
 import 'package:berseri/features/auth/register_page.dart';
-import 'package:berseri/features/camera/camera_page.dart';
+import 'package:berseri/features/camera/presentation/pages/camera_page.dart';
 import 'package:berseri/features/diagnosis/analysis_loading_page.dart';
 import 'package:berseri/features/diagnosis/analysis_result_model.dart';
 import 'package:berseri/features/diagnosis/analysis_result_page.dart';
