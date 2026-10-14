@@ -15,7 +15,7 @@ class TestPage extends StatelessWidget {
             CustomButton(
               text: 'save',
               onPressed: () {
-                print("save test");
+                debugPrint("save test");
               },
             ),
 
@@ -24,7 +24,7 @@ class TestPage extends StatelessWidget {
             CustomButton(
               text: 'delete',
               onPressed: () {
-                print("delete test");
+                debugPrint("delete test");
               },
               textColor: Colors.white,
               backgroundColor: Colors.red,

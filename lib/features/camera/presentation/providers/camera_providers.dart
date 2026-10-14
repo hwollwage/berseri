@@ -1,10 +1,21 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'package:berseri/features/analysis/analysis_history_provider.dart';
+import 'package:berseri/features/analysis/analysis_record.dart';
+import 'package:berseri/features/camera/data/audio_capture_feedback.dart';
+import 'package:berseri/features/camera/domain/capture_feedback.dart';
 import 'package:berseri/features/classification/classification_provider.dart';
+
+final captureFeedbackProvider = Provider<CaptureFeedback>((ref) {
+  final feedback = AudioCaptureFeedback();
+  ref.onDispose(feedback.dispose);
+  return feedback;
+});
 
 class CameraState {
   final CameraController controller;
@@ -43,9 +54,12 @@ class CameraState {
 
 class CameraNotifier extends AsyncNotifier<CameraState> {
   final ImagePicker _picker = ImagePicker();
+  CameraController? _controller;
 
   @override
   Future<CameraState> build() async {
+    ref.onDispose(() => _controller?.dispose());
+
     final cameras = await availableCameras();
     if (cameras.isEmpty) {
       throw Exception('Tidak ada kamera yang tersedia');
@@ -73,7 +87,7 @@ class CameraNotifier extends AsyncNotifier<CameraState> {
       enableAudio: false,
     );
     await controller.initialize();
-    ref.onDispose(() => controller.dispose());
+    _controller = controller;
     return controller;
   }
 
@@ -107,18 +121,26 @@ class CameraNotifier extends AsyncNotifier<CameraState> {
 
   Future<void> takePicture() async {
     final current = state.asData?.value;
-    if (current == null) return;
+    if (current == null || current.controller.value.isTakingPicture) return;
+
+    // Cekrek berbunyi bersamaan dengan capture, tidak menunggu suara selesai.
+    unawaited(ref.read(captureFeedbackProvider).shutter());
 
     final file = await current.controller.takePicture();
     state = AsyncData(current.copyWith(imageFile: file));
     await ref.read(classificationProvider.notifier).classify(File(file.path));
   }
 
-  Future<void> pickFromGallery() async {
+    Future<void> pickFromGallery() async {
     final current = state.asData?.value;
     if (current == null) return;
 
-    final picked = await _picker.pickImage(source: ImageSource.gallery);
+    final picked = await _picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1280,
+      maxHeight: 1280,
+      imageQuality: 85,
+    );
     if (picked == null) return;
 
     state = AsyncData(current.copyWith(imageFile: picked));
@@ -135,9 +157,22 @@ class CameraNotifier extends AsyncNotifier<CameraState> {
 
   Future<void> confirmPicture() async {
     final current = state.asData?.value;
-    if(current?.imageFile == null) return;
-    /// HASIL ML NANTI
-  } 
+    final image = current?.imageFile;
+    if (current == null || image == null) return;
+
+    final result = ref.read(classificationProvider).asData?.value;
+    if (result != null) {
+      ref
+          .read(analysisHistoryProvider.notifier)
+          .add(
+            AnalysisRecord.fromClassification(result, photoPath: image.path),
+          );
+    }
+
+    ref.read(classificationProvider.notifier).reset();
+    state = AsyncData(current.copyWith(clearImage: true));
+  }
 }
 
-final cameraProvider = AsyncNotifierProvider<CameraNotifier, CameraState>(CameraNotifier.new);
+final cameraProvider =
+    AsyncNotifierProvider<CameraNotifier, CameraState>(CameraNotifier.new);

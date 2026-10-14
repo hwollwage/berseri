@@ -1,0 +1,8 @@
+# Flutter's tooling rewrites the generated plugin registrants with LF endings.
+# Pin them to LF so core.autocrlf=true does not report them as modified after
+# every `flutter pub get` / build.
+linux/flutter/generated_plugin_registrant.* text eol=lf
+linux/flutter/generated_plugins.cmake text eol=lf
+macos/Flutter/GeneratedPluginRegistrant.swift text eol=lf
+windows/flutter/generated_plugin_registrant.* text eol=lf
+windows/flutter/generated_plugins.cmake text eol=lf
