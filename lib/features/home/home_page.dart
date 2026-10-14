@@ -1,4 +1,5 @@
 import 'package:berseri/core/components/custom_nav_bar.dart';
+import 'package:berseri/features/camera/presentation/pages/analysis_tips_page.dart';
 import 'package:berseri/features/camera/presentation/pages/camera_page.dart';
 import 'package:berseri/features/home/dashboard_page.dart';
 import 'package:berseri/features/ingredients/ingredients_page.dart';
@@ -40,9 +41,29 @@ class _HomePageState extends State<HomePage> {
 
   int selectedIndex = _homeTab;
 
+  /// Switches to [index], but intercepts the camera tab to first show the
+  /// analysis tips page. The tips page's "I'm Ready" button calls [_goToCamera]
+  /// which dismisses the route and then actually switches the tab.
   void _selectTab(int index) {
+    if (index == _analyzeTab) {
+      _pushTipsPage();
+      return;
+    }
     if (index == selectedIndex) return;
     setState(() => selectedIndex = index);
+  }
+
+  void _pushTipsPage() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => AnalysisTipsPage(
+          onReady: () {
+            Navigator.of(context).pop(); // dismiss tips page
+            setState(() => selectedIndex = _analyzeTab);
+          },
+        ),
+      ),
+    );
   }
 
   @override
