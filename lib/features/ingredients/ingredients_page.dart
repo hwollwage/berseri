@@ -1,9 +1,8 @@
+import 'package:berseri/core/components/app_radius.dart';
 import 'package:berseri/features/ingredients/ingredient.dart';
 import 'package:berseri/features/ingredients/ingredient_detail_page.dart';
 import 'package:flutter/material.dart';
 
-/// Reference library of common skincare ingredients: search, concern filters
-/// and a two-column grid of cards that open a detail sheet.
 class IngredientsPage extends StatefulWidget {
   const IngredientsPage({super.key});
 
@@ -14,7 +13,6 @@ class IngredientsPage extends StatefulWidget {
 class _IngredientsPageState extends State<IngredientsPage> {
   final TextEditingController _searchController = TextEditingController();
 
-  /// null means "All".
   IngredientCategory? _category;
   String _query = '';
 
@@ -171,24 +169,18 @@ class _CategoryChip extends StatelessWidget {
 class _IngredientCard extends StatelessWidget {
   const _IngredientCard({required this.ingredient, required this.onTap});
 
-  /// Category label: one line is always reserved for it.
   static const double _labelFontSize = 11;
   static const double _labelHeight = 1.45;
 
-  /// Name type size and leading.
   static const double _nameFontSize = 19;
   static const double _nameHeight = 1.15;
 
-  /// Names are capped at two lines, and both lines are always reserved so the
-  /// category label sits at the same height in every card of the grid.
   static const int _nameLines = 2;
 
   static const EdgeInsets _padding = EdgeInsets.fromLTRB(14, 18, 14, 14);
 
-  /// Gap between category label and ingredient name.
   static const double _labelGap = 5;
 
-  /// The concern badge is pinned to the card's top-right corner.
   static const double _badgeTop = 12;
   static const double _badgeSize = 32;
 
@@ -213,9 +205,6 @@ class _IngredientCard extends StatelessWidget {
     );
   }
 
-  /// Height of one line of [style] under the ambient text scale, measured the
-  /// same way the paragraph itself is laid out so the space reserved for text
-  /// matches it exactly at every text scale.
   static double _lineHeight(BuildContext context, TextStyle style) {
     final painter = TextPainter(
       text: TextSpan(text: 'X', style: style),
@@ -228,12 +217,9 @@ class _IngredientCard extends StatelessWidget {
     return height;
   }
 
-  /// Space reserved for the name, honouring the ambient text scale.
   static double _nameBlockHeight(BuildContext context) =>
       _lineHeight(context, nameStyle(context)) * _nameLines;
 
-  /// Row height for the ingredient grid: card padding, label, clean gap,
-  /// and reserved name block height to fit all cards comfortably.
   static double gridExtent(BuildContext context) =>
       _padding.vertical +
       _lineHeight(context, labelStyle(context)) +
@@ -251,7 +237,7 @@ class _IngredientCard extends StatelessWidget {
     return Material(
       color: scheme.surfaceContainerLowest,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(AppRadius.card),
         side: BorderSide(color: scheme.outlineVariant),
       ),
       clipBehavior: Clip.antiAlias,

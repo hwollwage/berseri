@@ -1,5 +1,4 @@
 import 'package:berseri/features/analysis/history_page.dart';
-import 'package:berseri/features/analysis/result_page.dart';
 import 'package:berseri/features/auth/login_page.dart';
 import 'package:berseri/features/auth/register_page.dart';
 import 'package:berseri/features/camera/presentation/pages/camera_page.dart';
@@ -10,6 +9,8 @@ import 'package:berseri/features/diagnosis/diagnosis_page.dart';
 import 'package:berseri/features/home/home_page.dart';
 import 'package:berseri/features/ingredients/ingredient.dart';
 import 'package:berseri/features/ingredients/ingredient_detail_page.dart';
+import 'package:berseri/features/onboarding/presentation/onboarding_page.dart';
+import 'package:berseri/features/profile/change_password_page.dart';
 import 'package:berseri/features/profile/profile_page.dart';
 import 'package:berseri/features/questionnaire/presentation/questionnaire_page.dart';
 import 'package:berseri/features/routine/routine_page.dart';
@@ -29,6 +30,12 @@ final router = GoRouter(
     ),
 
     GoRoute(
+      path: '/onboarding',
+      name: 'onboarding',
+      builder: (context, state) => const OnboardingPage(),
+    ),
+
+    GoRoute(
       path: '/',
       name: 'home',
       builder: (context, state) => const HomePage(),
@@ -38,7 +45,7 @@ final router = GoRouter(
       path: '/auth',
       name: 'auth',
       redirect: (context, state) {
-        if (state.matchedLocation == '/auth') {
+        if (state.uri.path == '/auth') {
           return '/auth/login';
         }
         return null;
@@ -65,15 +72,15 @@ final router = GoRouter(
     ),
 
     GoRoute(
-      path: '/history',
-      name: 'history',
-      builder: (context, state) => const HistoryPage(),
+      path: '/change-password',
+      name: 'change-password',
+      builder: (context, state) => const ChangePasswordPage(),
     ),
 
     GoRoute(
-      path: '/result',
-      name: 'result',
-      builder: (context, state) => const ResultPage(),
+      path: '/history',
+      name: 'history',
+      builder: (context, state) => const HistoryPage(),
     ),
 
     GoRoute(

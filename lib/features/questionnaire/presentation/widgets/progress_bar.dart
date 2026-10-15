@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 
-const kOrange = Color(0xFFF59E0B);
-const kCream = Color(0xFFFCFAF5);
-
 class QuestionProgressBar extends StatelessWidget {
   final int current; // 0-based
   final int total;
@@ -11,6 +8,8 @@ class QuestionProgressBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Row(
       children: List.generate(total, (i) {
         return Expanded(
@@ -18,7 +17,7 @@ class QuestionProgressBar extends StatelessWidget {
             height: 3,
             margin: EdgeInsets.only(right: i == total - 1 ? 0 : 6),
             decoration: BoxDecoration(
-              color: i <= current ? kOrange : const Color(0xFFE5E2DA),
+              color: i <= current ? scheme.primary : scheme.outline,
               borderRadius: BorderRadius.circular(2),
             ),
           ),

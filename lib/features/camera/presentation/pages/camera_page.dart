@@ -1,3 +1,4 @@
+import 'package:berseri/core/components/app_colors.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,8 +12,6 @@ import 'package:berseri/features/camera/presentation/widgets/face_guide_overlay.
 import 'package:berseri/features/camera/presentation/widgets/glass_widgets.dart';
 import 'package:berseri/features/camera/presentation/widgets/shutter_button.dart';
 import 'package:berseri/features/classification/classification_provider.dart';
-
-const _brand = Color(0xFFF4B700);
 
 class CameraPage extends ConsumerStatefulWidget {
   const CameraPage({super.key});
@@ -248,9 +247,11 @@ class _ReviewControls extends StatelessWidget {
             icon: const Icon(Icons.check),
             label: const Text('Use photo'),
             style: FilledButton.styleFrom(
-              backgroundColor: _brand,
+              backgroundColor: AppColors.cameraAccent,
               foregroundColor: Colors.black,
-              disabledBackgroundColor: _brand.withValues(alpha: 0.5),
+              disabledBackgroundColor: AppColors.cameraAccent.withValues(
+                alpha: 0.5,
+              ),
               disabledForegroundColor: Colors.black54,
               minimumSize: const Size.fromHeight(52),
               shape: const StadiumBorder(),

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'progress_bar.dart';
 
 class OptionTile extends StatelessWidget {
   final String label;
@@ -13,28 +12,35 @@ class OptionTile extends StatelessWidget {
     required this.onTap,
   });
 
+  static const double _radius = 6;
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(_radius),
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           decoration: BoxDecoration(
-            color: selected ? kOrange : Colors.white,
-            borderRadius: BorderRadius.circular(6),
+            color: selected
+                ? scheme.primary
+                : scheme.surfaceContainerLowest,
+            borderRadius: BorderRadius.circular(_radius),
             border: Border.all(
-              color: selected ? kOrange : const Color(0xFFEDEAE2),
+              color: selected ? scheme.primary : scheme.outlineVariant,
             ),
           ),
           child: Text(
             label,
-            style: TextStyle(
+            style: theme.textTheme.bodyMedium?.copyWith(
               fontSize: 13,
-              color: selected ? Colors.white : Colors.black87,
+              color: selected ? scheme.onPrimary : scheme.onSurface,
             ),
           ),
         ),

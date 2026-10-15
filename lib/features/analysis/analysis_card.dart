@@ -1,7 +1,9 @@
+import 'package:berseri/core/components/app_radius.dart';
+import 'package:berseri/core/components/brand.dart';
+import 'package:berseri/core/components/condition_chip.dart';
 import 'package:berseri/features/analysis/analysis_record.dart';
 import 'package:flutter/material.dart';
 
-/// Compact summary of a single analysis: skin type, date and conditions.
 class AnalysisCard extends StatelessWidget {
   const AnalysisCard({super.key, required this.record});
 
@@ -16,7 +18,7 @@ class AnalysisCard extends StatelessWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppRadius.card),
         border: Border.all(color: scheme.outlineVariant),
       ),
       child: Column(
@@ -29,7 +31,7 @@ class AnalysisCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Skin type', style: _caption(theme)),
+                    Text('Skin type', style: BrandText.fieldLabel(context)),
                     const SizedBox(height: 4),
                     Text(
                       record.skinTypeLabel,
@@ -51,51 +53,18 @@ class AnalysisCard extends StatelessWidget {
 
           if (record.conditions.isNotEmpty) ...[
             const SizedBox(height: 16),
-            Text('Visible conditions', style: _caption(theme)),
+            Text('Visible conditions', style: BrandText.fieldLabel(context)),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
                 for (final condition in record.conditions)
-                  _ConditionChip(label: condition),
+                  ConditionChip(label: condition),
               ],
             ),
           ],
         ],
-      ),
-    );
-  }
-}
-
-TextStyle? _caption(ThemeData theme) => theme.textTheme.labelSmall?.copyWith(
-  color: theme.colorScheme.onSurfaceVariant,
-  letterSpacing: 0.7,
-  fontWeight: FontWeight.w600,
-);
-
-class _ConditionChip extends StatelessWidget {
-  const _ConditionChip({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: theme.textTheme.labelMedium?.copyWith(
-          color: scheme.onSurface,
-          fontWeight: FontWeight.w600,
-        ),
       ),
     );
   }

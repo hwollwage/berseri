@@ -1,10 +1,14 @@
+import 'package:berseri/core/components/app_back_button.dart';
+import 'package:berseri/core/components/app_radius.dart';
+import 'package:berseri/core/components/brand.dart';
 import 'package:berseri/core/components/custom_nav_bar.dart';
 import 'package:berseri/features/ingredients/ingredient.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-/// Detailed view of a skincare ingredient: key benefits, usage, what it does,
-/// and synergistic pairings with other ingredients.
+TextStyle _accentTitle(BuildContext context) =>
+    BrandText.title(context).copyWith(color: BrandText.accent(context));
+
 class IngredientDetailPage extends StatelessWidget {
   const IngredientDetailPage({
     super.key,
@@ -12,8 +16,6 @@ class IngredientDetailPage extends StatelessWidget {
   });
 
   final Ingredient ingredient;
-
-  static const Color _amberAccent = Color(0xFFB45309);
 
   @override
   Widget build(BuildContext context) {
@@ -32,48 +34,17 @@ class IngredientDetailPage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Circular back button
-                    Material(
-                      color: scheme.surfaceContainerLowest,
-                      shape: const CircleBorder(),
-                      elevation: 1,
-                      shadowColor: Colors.black.withValues(alpha: 0.06),
-                      child: InkWell(
-                        customBorder: const CircleBorder(),
-                        onTap: () => Navigator.of(context).maybePop(),
-                        child: Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: scheme.outlineVariant.withValues(alpha: 0.6),
-                            ),
-                          ),
-                          child: Icon(
-                            Icons.arrow_back_ios_new_rounded,
-                            size: 18,
-                            color: scheme.onSurface,
-                          ),
-                        ),
-                      ),
-                    ),
+                    const AppBackButton(),
 
                     const SizedBox(height: 24),
 
-                    // Category label
                     Text(
                       ingredient.category.label,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: _amberAccent,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.2,
-                      ),
+                      style: _accentTitle(context),
                     ),
 
                     const SizedBox(height: 4),
 
-                    // Ingredient title
                     Text(
                       ingredient.name,
                       style: theme.textTheme.headlineMedium?.copyWith(
@@ -84,20 +55,13 @@ class IngredientDetailPage extends StatelessWidget {
                     ),
 
                     const SizedBox(height: 20),
-
-                    // Key attributes table with dividers
                     _AttributeTable(ingredient: ingredient),
 
                     const SizedBox(height: 28),
 
-                    // What It Does section
                     Text(
                       'What It Does',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: _amberAccent,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.2,
-                      ),
+                      style: _accentTitle(context),
                     ),
 
                     const SizedBox(height: 10),
@@ -105,7 +69,7 @@ class IngredientDetailPage extends StatelessWidget {
                     Text(
                       ingredient.whatItDoes ?? ingredient.summary,
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: scheme.onSurface.withValues(alpha: 0.9),
+                        color: scheme.onSurface,
                         height: 1.5,
                         fontSize: 15,
                       ),
@@ -113,15 +77,10 @@ class IngredientDetailPage extends StatelessWidget {
 
                     const SizedBox(height: 28),
 
-                    // Pairs Well With section
                     if (ingredient.pairsWellWith.isNotEmpty) ...[
                       Text(
                         'Pairs Well With',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: _amberAccent,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.2,
-                        ),
+                        style: _accentTitle(context),
                       ),
                       const SizedBox(height: 12),
                       for (final pairing in ingredient.pairsWellWith)
@@ -132,7 +91,6 @@ class IngredientDetailPage extends StatelessWidget {
               ),
             ),
 
-            // Floating Custom Bottom Nav Bar
             Positioned(
               left: 0,
               right: 0,
@@ -145,7 +103,6 @@ class IngredientDetailPage extends StatelessWidget {
                   } else if (index == 1) {
                     context.push('/camera');
                   } else {
-                    // Already on ingredients detail, pop back to ingredients list
                     Navigator.of(context).maybePop();
                   }
                 },
@@ -190,7 +147,7 @@ class _AttributeTable extends StatelessWidget {
     return Divider(
       height: 1,
       thickness: 1,
-      color: scheme.outlineVariant.withValues(alpha: 0.5),
+      color: scheme.outlineVariant.withValues(alpha: 0.6),
     );
   }
 }
@@ -248,7 +205,7 @@ class _PairingCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(AppRadius.card),
         border: Border.all(
           color: scheme.outlineVariant.withValues(alpha: 0.6),
         ),
@@ -256,7 +213,7 @@ class _PairingCard extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(AppRadius.card),
           onTap: () {
             final target = ingredientLibrary.firstWhere(
               (item) => item.name.toLowerCase() == pairing.name.toLowerCase(),

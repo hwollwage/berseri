@@ -1,115 +1,107 @@
+import 'package:berseri/core/components/app_back_button.dart';
+import 'package:berseri/core/components/app_radius.dart';
+import 'package:berseri/core/components/app_spacing.dart';
+import 'package:berseri/core/components/brand.dart';
+import 'package:berseri/features/auth/auth_rules.dart';
+import 'package:berseri/features/profile/user_profile_provider.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-class ProfilePage extends StatelessWidget {
+const String _placeholderName = 'Jane Doe';
+const String _placeholderEmail = 'janedoe04@gmail.com';
+
+class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // Soft cream background color from the reference
-    const Color backgroundColor = Color(0xFFFDF6E9);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final profile = ref.watch(userProfileProvider);
+    final name = (profile?.name.isNotEmpty ?? false)
+        ? profile!.name
+        : _placeholderName;
+    final email = (profile?.email.isNotEmpty ?? false)
+        ? profile!.email
+        : _placeholderEmail;
 
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: scheme.surface,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.gutter,
+            vertical: AppSpacing.gutter,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Custom Back Button
               Align(
                 alignment: Alignment.topLeft,
-                child: Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 10,
-                        spreadRadius: 1,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: IconButton(
-                    icon: const Icon(
-                      Icons.arrow_back_ios_new_rounded,
-                      size: 18,
-                      color: Colors.black87,
-                    ),
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                  ),
+                child: AppBackButton(
+                  onTap: () => Navigator.of(context).maybePop(),
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: AppSpacing.xxxl),
 
-              // Profile Avatar Placeholder
+              // Avatar placeholder
               Container(
                 width: 110,
                 height: 110,
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
+                  color: scheme.surfaceContainerHigh,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.person,
                   size: 80,
-                  color: Colors.white,
+                  color: scheme.onSurfaceVariant,
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: AppSpacing.xl),
 
               // Name
-              Text(
-                'Jane Doe',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 4),
+              Text(name, style: BrandText.headline(context, fontSize: 26)),
+              const SizedBox(height: AppSpacing.xs),
 
-              // Email and Edit Icon
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'janedoe04@gmail.com',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w400,
-                      color: Colors.grey.shade800,
-                    ),
+              // Email
+              InkWell(
+                onTap: () => _editEmail(context, ref, email),
+                borderRadius: BorderRadius.circular(AppRadius.control),
+                splashColor: scheme.onSurface.withValues(alpha: 0.05),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
                   ),
-                  const SizedBox(width: 8),
-                  const Icon(
-                    Icons.edit,
-                    size: 16,
-                    color: Colors.black87,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        email,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Icon(Icons.edit, size: 16, color: scheme.onSurface),
+                    ],
                   ),
-                ],
+                ),
               ),
               const SizedBox(height: 40),
 
-              // Menu Items
-              Divider(color: Colors.grey.shade300, height: 1, thickness: 0.5),
-              _buildMenuItem(
+              // Actions
+              const Divider(),
+              _MenuItem(
                 icon: Icons.lock_outline,
                 title: 'Change Password',
                 showTrailing: true,
-                onTap: () {
-                  // TODO: Implement Change Password logic
-                },
+                onTap: () => context.push('/change-password'),
               ),
-              Divider(color: Colors.grey.shade300, height: 1, thickness: 0.5),
-              _buildMenuItem(
+              const Divider(),
+              _MenuItem(
                 icon: Icons.logout,
                 title: 'Log out',
                 showTrailing: false,
@@ -117,7 +109,7 @@ class ProfilePage extends StatelessWidget {
                   // TODO: Implement Log out logic
                 },
               ),
-              Divider(color: Colors.grey.shade300, height: 1, thickness: 0.5),
+              const Divider(),
             ],
           ),
         ),
@@ -125,41 +117,146 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  // Reusable widget for the menu items
-  Widget _buildMenuItem({
-    required IconData icon,
-    required String title,
-    required bool showTrailing,
-    required VoidCallback onTap,
-  }) {
+  Future<void> _editEmail(
+    BuildContext context,
+    WidgetRef ref,
+    String currentEmail,
+  ) async {
+    final updated = await showDialog<String>(
+      context: context,
+      builder: (_) => _EditEmailDialog(initialEmail: currentEmail),
+    );
+
+    if (updated == null || updated == currentEmail || !context.mounted) return;
+
+    ref.read(userProfileProvider.notifier).updateEmail(updated);
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Email updated to $updated')));
+  }
+}
+
+class _MenuItem extends StatelessWidget {
+  const _MenuItem({
+    required this.icon,
+    required this.title,
+    required this.showTrailing,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final bool showTrailing;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
     return InkWell(
       onTap: onTap,
-      highlightColor: Colors.transparent,
-      splashColor: Colors.black.withValues(alpha: 0.05),
+      splashColor: scheme.onSurface.withValues(alpha: 0.05),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 4.0),
+        padding: const EdgeInsets.symmetric(
+          vertical: AppSpacing.xl,
+          horizontal: AppSpacing.xs,
+        ),
         child: Row(
           children: [
-            Icon(icon, color: Colors.black87, size: 22),
-            const SizedBox(width: 16),
+            Icon(icon, color: scheme.onSurface, size: 22),
+            const SizedBox(width: AppSpacing.lg),
             Text(
               title,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 16,
-                fontWeight: FontWeight.w400,
-                color: Colors.black87,
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: scheme.onSurface,
               ),
             ),
             const Spacer(),
             if (showTrailing)
-              const Icon(
+              Icon(
                 Icons.chevron_right_rounded,
-                color: Colors.black87,
+                color: scheme.onSurfaceVariant,
                 size: 22,
               ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _EditEmailDialog extends StatefulWidget {
+  const _EditEmailDialog({required this.initialEmail});
+
+  final String initialEmail;
+
+  @override
+  State<_EditEmailDialog> createState() => _EditEmailDialogState();
+}
+
+class _EditEmailDialogState extends State<_EditEmailDialog> {
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.initialEmail,
+  );
+  String? _error;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final value = _controller.text.trim();
+    if (!AuthRules.isEmail(value)) {
+      setState(() => _error = 'Enter a valid email address.');
+      return;
+    }
+    Navigator.of(context).pop(value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return AlertDialog(
+      title: const Text('Edit email'),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        keyboardType: TextInputType.emailAddress,
+        textInputAction: TextInputAction.done,
+        onSubmitted: (_) => _save(),
+        style: theme.textTheme.bodyLarge,
+        decoration: InputDecoration(
+          hintText: 'name@example.com',
+          errorText: _error,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(
+            'Cancel',
+            style: theme.textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+        TextButton(
+          onPressed: _save,
+          child: Text(
+            'Save',
+            style: theme.textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: BrandText.accent(context),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

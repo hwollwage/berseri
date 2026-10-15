@@ -1,3 +1,5 @@
+import 'package:berseri/core/components/app_colors.dart';
+import 'package:berseri/core/components/brand.dart';
 import 'package:flutter/material.dart';
 
 import '../data/questionnaire_data.dart';
@@ -49,10 +51,12 @@ class _QuestionnairePageState extends State<QuestionnairePage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final question = questions[_index];
 
     return Scaffold(
-      backgroundColor: const Color(0xFF292828),
+      backgroundColor: AppColors.sheetBackdrop,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -61,7 +65,7 @@ class _QuestionnairePageState extends State<QuestionnairePage> {
               child: Container(
                 width: double.infinity,
                 margin: const EdgeInsets.symmetric(horizontal: 8),
-                color: const Color(0xFFFCFAF5),
+                color: scheme.surface,
                 child: LayoutBuilder(
                   builder: (context, constraints) {
                     final isSmallScreen = constraints.maxWidth < 420;
@@ -81,22 +85,22 @@ class _QuestionnairePageState extends State<QuestionnairePage> {
                           Row(
                             children: [
                               Material(
-                                color: Colors.white,
-                                shape: const CircleBorder(
+                                color: scheme.surfaceContainerLowest,
+                                shape: CircleBorder(
                                   side: BorderSide(
-                                    color: Color(0xFFEDE7DE),
+                                    color: scheme.outlineVariant,
                                   ),
                                 ),
                                 child: InkWell(
                                   onTap: _back,
                                   customBorder: const CircleBorder(),
-                                  child: const SizedBox(
+                                  child: SizedBox(
                                     width: 50,
                                     height: 50,
                                     child: Icon(
                                       Icons.arrow_back,
                                       size: 22,
-                                      color: Color(0xFF242424),
+                                      color: scheme.onSurface,
                                     ),
                                   ),
                                 ),
@@ -113,20 +117,20 @@ class _QuestionnairePageState extends State<QuestionnairePage> {
                           const SizedBox(height: 30),
                           Text(
                             'Question ${_index + 1} of ${questions.length}',
-                            style: const TextStyle(
+                            style: theme.textTheme.bodyMedium?.copyWith(
                               fontSize: 14,
-                              color: Color(0xFFC47A00),
                               fontWeight: FontWeight.w700,
+                              color: BrandText.accent(context),
                             ),
                           ),
                           const SizedBox(height: 12),
                           Text(
                             question.title,
-                            style: TextStyle(
+                            style: theme.textTheme.bodyMedium?.copyWith(
                               fontSize: titleSize,
                               fontWeight: FontWeight.w600,
                               height: 1.08,
-                              color: const Color(0xFF24211F),
+                              color: scheme.onSurface,
                             ),
                           ),
                           const SizedBox(height: 26),
@@ -147,19 +151,20 @@ class _QuestionnairePageState extends State<QuestionnairePage> {
                               onPressed:
                                   _answers[_index] == null ? null : _next,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: kOrange,
-                                foregroundColor: Colors.white,
+                                backgroundColor: scheme.surfaceContainerLowest,
+                                foregroundColor: scheme.onSurface,
                                 disabledBackgroundColor:
-                                    kOrange.withValues(alpha: 0.4),
-                                disabledForegroundColor: Colors.white,
+                                    scheme.surfaceContainerHighest,
+                                disabledForegroundColor:
+                                    scheme.onSurfaceVariant,
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                               ),
-                              child: const Text(
+                              child: Text(
                                 'Next  >',
-                                style: TextStyle(
+                                style: theme.textTheme.labelLarge?.copyWith(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
                                 ),
