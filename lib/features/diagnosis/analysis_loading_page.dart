@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:berseri/core/components/app_colors.dart';
+import 'package:berseri/core/components/app_radius.dart';
+import 'package:berseri/core/components/app_spacing.dart';
+import 'package:berseri/core/components/brand.dart';
 import 'package:berseri/features/diagnosis/analysis_result_model.dart';
 import 'package:berseri/features/diagnosis/widgets/skin_photo.dart';
 import 'package:flutter/material.dart';
@@ -22,6 +24,8 @@ class _AnalysisLoadingPageState extends State<AnalysisLoadingPage> {
     'Detecting visible conditions',
     'Preparing your result',
   ];
+
+  static const double _ringSize = 160;
 
   int _done = 0; // jumlah langkah yang sudah selesai
   Timer? _timer;
@@ -59,77 +63,69 @@ class _AnalysisLoadingPageState extends State<AnalysisLoadingPage> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final stepNumber = math.min(_done + 1, _steps.length);
     final progress = (_done + 0.5) / _steps.length;
 
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [AppColors.cream, AppColors.peach],
+      backgroundColor: scheme.surface,
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.gutter,
+            AppSpacing.xxxl,
+            AppSpacing.gutter,
+            AppSpacing.xxxl,
           ),
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              children: [
-                const SizedBox(height: 40),
-                TweenAnimationBuilder<double>(
-                  tween: Tween(end: progress.clamp(0.0, 1.0)),
-                  duration: const Duration(milliseconds: 500),
-                  builder: (context, value, _) => SizedBox(
-                    width: 160,
-                    height: 160,
-                    child: CustomPaint(
-                      painter: _ArcPainter(value),
-                      child: Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: ClipOval(child: SkinPhoto(path: widget.imagePath)),
+          children: [
+            // ── Progress ring around the captured photo ─────────────────
+            Center(
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(end: progress.clamp(0.0, 1.0)),
+                duration: const Duration(milliseconds: 500),
+                builder: (context, value, _) => SizedBox(
+                  width: _ringSize,
+                  height: _ringSize,
+                  child: CustomPaint(
+                    painter: _RingPainter(
+                      progress: value,
+                      color: scheme.primary,
+                      // `surfaceContainerHighest` rather than `outlineVariant`:
+                      // the variant sits at 1.06:1 against the cream page, so
+                      // the unfilled part of the ring was invisible and the arc
+                      // read as a floating sliver.
+                      trackColor: scheme.surfaceContainerHighest,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: ClipOval(
+                        child: SkinPhoto(path: widget.imagePath),
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 32),
-                const Text(
-                  'Analyzing Your Skin',
-                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Step $stepNumber of ${_steps.length}, please keep the app open',
-                  style: const TextStyle(fontSize: 12, color: Colors.black45),
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  children: List.generate(5, (i) {
-                    return Expanded(
-                      child: Container(
-                        height: 3,
-                        margin: EdgeInsets.only(right: i == 4 ? 0 : 6),
-                        decoration: BoxDecoration(
-                          color: i < _done
-                              ? AppColors.orange
-                              : const Color(0xFFE5E2DA),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    );
-                  }),
-                ),
-                const SizedBox(height: 16),
-                ...List.generate(_steps.length, (i) {
-                  final status = i < _done
-                      ? _Status.done
-                      : (i == _done ? _Status.inProgress : _Status.waiting);
-                  return _StepRow(label: _steps[i], status: status);
-                }),
-              ],
+              ),
             ),
-          ),
+
+            const SizedBox(height: AppSpacing.xxxl),
+
+            Text(
+              'Analyzing Your Skin',
+              textAlign: TextAlign.center,
+              style: BrandText.headline(context, fontSize: 24),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'Step $stepNumber of ${_steps.length}, please keep the app '
+              'open.',
+              textAlign: TextAlign.center,
+              style: BrandText.body(context),
+            ),
+
+            const SizedBox(height: AppSpacing.xxl),
+
+            _StepsCard(steps: _steps, done: _done),
+          ],
         ),
       ),
     );
@@ -138,30 +134,84 @@ class _AnalysisLoadingPageState extends State<AnalysisLoadingPage> {
 
 enum _Status { done, inProgress, waiting }
 
-class _StepRow extends StatelessWidget {
-  final String label;
-  final _Status status;
-  const _StepRow({required this.label, required this.status});
+class _StepsCard extends StatelessWidget {
+  const _StepsCard({required this.steps, required this.done});
+
+  final List<String> steps;
+  final int done;
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          for (var i = 0; i < steps.length; i++) ...[
+            if (i > 0) const Divider(height: 1),
+            _StepRow(
+              label: steps[i],
+              status: i < done
+                  ? _Status.done
+                  : (i == done ? _Status.inProgress : _Status.waiting),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _StepRow extends StatelessWidget {
+  const _StepRow({required this.label, required this.status});
+
+  final String label;
+  final _Status status;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isWaiting = status == _Status.waiting;
+
     final text = switch (status) {
       _Status.done => 'Done',
       _Status.inProgress => 'In progress',
       _Status.waiting => 'Waiting',
     };
 
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14),
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: Color(0x14000000))),
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.cardPadding,
+        vertical: AppSpacing.lg,
       ),
       child: Row(
         children: [
           _StatusIcon(status),
-          const SizedBox(width: 12),
-          Expanded(child: Text(label, style: const TextStyle(fontSize: 15))),
-          Text(text, style: const TextStyle(fontSize: 11, color: Colors.black38)),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Text(
+              label,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: isWaiting ? scheme.onSurfaceVariant : scheme.onSurface,
+              ),
+            ),
+          ),
+          Text(
+            text,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: status == _Status.inProgress
+                  ? BrandText.accent(context)
+                  : scheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );
@@ -169,56 +219,93 @@ class _StepRow extends StatelessWidget {
 }
 
 class _StatusIcon extends StatelessWidget {
-  final _Status status;
   const _StatusIcon(this.status);
+
+  final _Status status;
+
+  static const double _size = 22;
+  static const double _core = 6;
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     switch (status) {
       case _Status.done:
-        return const CircleAvatar(
-          radius: 11,
-          backgroundColor: AppColors.orange,
-          child: Icon(Icons.check, size: 14, color: Colors.white),
+        return Container(
+          width: _size,
+          height: _size,
+          decoration: BoxDecoration(
+            color: scheme.primary,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(Icons.check, size: 14, color: scheme.onPrimary),
         );
       case _Status.inProgress:
         return Container(
-          width: 22,
-          height: 22,
+          width: _size,
+          height: _size,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: AppColors.orange, width: 2),
+            border: Border.all(color: scheme.primary, width: 2),
           ),
-          child: const Icon(Icons.check, size: 13, color: AppColors.orange),
+          child: Center(
+            child: Container(
+              width: _core,
+              height: _core,
+              decoration: BoxDecoration(
+                color: scheme.primary,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
         );
       case _Status.waiting:
         return Container(
-          width: 22,
-          height: 22,
+          width: _size,
+          height: _size,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: AppColors.orange, width: 2),
+            border: Border.all(color: scheme.outline, width: 2),
           ),
         );
     }
   }
 }
 
-class _ArcPainter extends CustomPainter {
+class _RingPainter extends CustomPainter {
+  _RingPainter({
+    required this.progress,
+    required this.color,
+    required this.trackColor,
+  });
+
   final double progress;
-  _ArcPainter(this.progress);
+  final Color color;
+  final Color trackColor;
+
+  static const double _strokeWidth = 5;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = AppColors.orange
+    final rect = (Offset.zero & size).deflate(_strokeWidth / 2);
+    final track = Paint()
+      ..color = trackColor
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 5
+      ..strokeWidth = _strokeWidth;
+    final arc = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = _strokeWidth
       ..strokeCap = StrokeCap.round;
-    final rect = Offset.zero & size;
-    canvas.drawArc(rect.deflate(2.5), -math.pi / 2, 2 * math.pi * progress, false, paint);
+
+    canvas.drawArc(rect, 0, 2 * math.pi, false, track);
+    canvas.drawArc(rect, -math.pi / 2, 2 * math.pi * progress, false, arc);
   }
 
   @override
-  bool shouldRepaint(_ArcPainter old) => old.progress != progress;
+  bool shouldRepaint(_RingPainter old) =>
+      old.progress != progress ||
+      old.color != color ||
+      old.trackColor != trackColor;
 }

@@ -1,171 +1,183 @@
+import 'package:berseri/core/components/app_back_button.dart';
+import 'package:berseri/core/components/app_radius.dart';
+import 'package:berseri/core/components/app_spacing.dart';
+import 'package:berseri/core/components/brand.dart';
+import 'package:berseri/core/components/custom_button.dart';
 import 'package:flutter/material.dart';
-
-import '../data/questionnaire_data.dart';
-import 'widgets/progress_bar.dart';
 import 'package:go_router/go_router.dart';
 
-class SummaryPage extends StatelessWidget {
-  final List<int?> answers;
+import '../data/questionnaire_data.dart';
+import '../models/question_model.dart';
 
-  const SummaryPage({
-    super.key,
-    required this.answers,
-  });
+class SummaryPage extends StatelessWidget {
+  const SummaryPage({super.key, required this.answers});
+
+  final List<int?> answers;
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF292828),
+      backgroundColor: scheme.surface,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: Container(
-                width: double.infinity,
-                margin: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Color(0xFFFFFEFC),
-                      Color(0xFFFFF0D2),
-                    ],
-                  ),
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.gutter,
+                  AppSpacing.lg,
+                  AppSpacing.gutter,
+                  0,
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(32, 56, 32, 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Questionnaire Complete',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFFC47A00),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Review Your Answer',
-                        style: TextStyle(
-                          fontSize: 30,
-                          height: 1.1,
-                          color: Color(0xFF24211F),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      Expanded(
-                        child: SingleChildScrollView(
-                          child: Column(
-                            children: List.generate(questions.length, (i) {
-                              final answer = i < answers.length
-                                  ? answers[i]
-                                  : null;
-                              final question = questions[i];
-
-                              final answerText =
-                                  answer != null &&
-                                      answer >= 0 &&
-                                      answer < question.options.length
-                                  ? question.options[answer].summary
-                                  : '-';
-
-                              return Container(
-                                constraints: const BoxConstraints(
-                                  minHeight: 41,
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 9,
-                                ),
-                                decoration: const BoxDecoration(
-                                  border: Border(
-                                    top: BorderSide(
-                                      color: Color(0xFFEDEAE2),
-                                    ),
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      flex: 6,
-                                      child: Text(
-                                        question.summaryLabel,
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          color: Color(0xFF99958F),
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      flex: 5,
-                                      child: Text(
-                                        answerText,
-                                        textAlign: TextAlign.right,
-                                        style: const TextStyle(
-                                          fontSize: 14,
-                                          color: Color(0xFF24211F),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () => Navigator.pop(context, true),
-                              style: OutlinedButton.styleFrom(
-                                backgroundColor: Colors.white,
-                                foregroundColor: const Color(0xFF24211F),
-                                minimumSize: const Size.fromHeight(42),
-                                side: const BorderSide(
-                                  color: Color(0xFFEDEAE2),
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                              child: const Text('Retake'),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: () {
-                                context.go('/analysis-loading'); //ini toodokubuat ke halaman  analysis load
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: kOrange,
-                                foregroundColor: Colors.white,
-                                elevation: 0,
-                                minimumSize: const Size.fromHeight(42),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                              child: const Text('Continue'),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                children: [
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: AppBackButton(),
                   ),
-                ),
+                  const SizedBox(height: AppSpacing.xxl),
+                  Text(
+                    'QUESTIONNAIRE COMPLETE',
+                    style: BrandText.eyebrow(context),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    'Review Your Answer',
+                    style: BrandText.headline(context),
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  _AnswersCard(answers: answers),
+                ],
               ),
+            ),
+            _Actions(
+              onRetake: () => Navigator.pop(context, true),
+              onContinue: () => context.go('/analysis-loading'),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _AnswersCard extends StatelessWidget {
+  const _AnswersCard({required this.answers});
+
+  final List<int?> answers;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          for (var i = 0; i < questions.length; i++) ...[
+            if (i > 0) const Divider(height: 1),
+            _AnswerRow(
+              label: questions[i].summaryLabel,
+              value: _answerText(
+                questions[i],
+                i < answers.length ? answers[i] : null,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+String _answerText(Question question, int? answer) {
+  if (answer == null || answer < 0 || answer >= question.options.length) {
+    return '-';
+  }
+  return question.options[answer].summary;
+}
+
+class _AnswerRow extends StatelessWidget {
+  const _AnswerRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.cardPadding,
+        vertical: AppSpacing.md,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 6,
+            child: Text(
+              label,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: scheme.onSurfaceVariant,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            flex: 5,
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: scheme.onSurface,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Actions extends StatelessWidget {
+  const _Actions({required this.onRetake, required this.onContinue});
+
+  final VoidCallback onRetake;
+  final VoidCallback onContinue;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.gutter,
+        AppSpacing.lg,
+        AppSpacing.gutter,
+        AppSpacing.xl,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextButton(
+            onPressed: onRetake,
+            style: TextButton.styleFrom(
+              foregroundColor: BrandText.accent(context),
+            ),
+            child: const Text('Retake'),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          CustomButton(text: 'Continue', onPressed: onContinue),
+        ],
       ),
     );
   }

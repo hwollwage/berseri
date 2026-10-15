@@ -1,9 +1,7 @@
+import 'package:berseri/core/components/app_radius.dart';
+import 'package:berseri/core/components/app_spacing.dart';
 import 'package:flutter/material.dart';
 
-/// Floating bottom navigation bar with a capsule pill container and a
-/// prominent center action button for the camera/analysis tab.
-///
-/// Can be reused across any screen in the app.
 class CustomNavBar extends StatelessWidget {
   const CustomNavBar({
     super.key,
@@ -13,18 +11,12 @@ class CustomNavBar extends StatelessWidget {
     this.onCameraTap,
   });
 
-  /// Index of the highlighted destination (0 = Home, 1 = Analyze/Camera, 2 = Ingredients).
   final int selectedIndex;
 
-  /// Called with the index of the destination the user tapped.
   final ValueChanged<int> onDestinationSelected;
 
-  /// Optional list of destinations. If omitted, defaults to Home, Analyze,
-  /// and Ingredients.
   final List<NavigationDestination>? destinations;
 
-  /// Optional custom callback when the center camera button is pressed.
-  /// If null, [onDestinationSelected] with index 1 is called.
   final VoidCallback? onCameraTap;
 
   @override
@@ -60,12 +52,17 @@ class CustomNavBar extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.gutter,
+          0,
+          AppSpacing.gutter,
+          AppSpacing.md,
+        ),
         child: Container(
           height: 68,
           decoration: BoxDecoration(
             color: scheme.surfaceContainerLowest,
-            borderRadius: BorderRadius.circular(34),
+            borderRadius: BorderRadius.circular(AppRadius.pill),
             border: Border.all(
               color: scheme.outlineVariant.withValues(alpha: 0.6),
               width: 1,
@@ -137,7 +134,7 @@ class _NavBarTab extends StatelessWidget {
         : destination.icon;
 
     return InkWell(
-      borderRadius: BorderRadius.circular(34),
+      borderRadius: BorderRadius.circular(AppRadius.pill),
       onTap: onTap,
       child: SizedBox(
         height: double.infinity,
@@ -153,13 +150,17 @@ class _NavBarTab extends StatelessWidget {
               child: iconWidget,
             ),
             const SizedBox(height: 3),
-            Text(
-              destination.label,
-              style: theme.textTheme.labelSmall?.copyWith(
-                fontSize: 11,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                color: isSelected ? scheme.primary : scheme.onSurface,
-                letterSpacing: -0.2,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                destination.label,
+                maxLines: 1,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  fontSize: 11,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  color: isSelected ? scheme.primary : scheme.onSurface,
+                  letterSpacing: -0.2,
+                ),
               ),
             ),
           ],
@@ -189,7 +190,7 @@ class _CenterActionButton extends StatelessWidget {
         : destination.icon;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
       child: Material(
         color: scheme.primary,
         shape: const CircleBorder(),

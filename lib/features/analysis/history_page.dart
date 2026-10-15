@@ -1,13 +1,14 @@
 import 'dart:io';
 
+import 'package:berseri/core/components/app_radius.dart';
 import 'package:berseri/features/analysis/analysis_history_provider.dart';
 import 'package:berseri/features/analysis/analysis_record.dart';
+import 'package:berseri/features/diagnosis/analysis_result_model.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-/// Past analyses, newest first, filed under a heading per month.
 class HistoryPage extends ConsumerWidget {
   const HistoryPage({super.key});
 
@@ -51,7 +52,10 @@ class HistoryPage extends ConsumerWidget {
                           for (final record in group.records) ...[
                             _HistoryCard(
                               record: record,
-                              onTap: () => context.push('/result'),
+                              onTap: () => context.push(
+                                '/analysis-result',
+                                extra: AnalysisResult.fromRecord(record),
+                              ),
                             ),
                             if (record != group.records.last)
                               const SizedBox(height: 10),
@@ -68,7 +72,6 @@ class HistoryPage extends ConsumerWidget {
   }
 }
 
-/// One month of history, ready to render.
 class HistoryGroup {
   const HistoryGroup({required this.label, required this.records});
 
@@ -76,8 +79,6 @@ class HistoryGroup {
   final List<AnalysisRecord> records;
 }
 
-/// Splits [records] into month sections, keeping the incoming (newest first)
-/// order both between and inside the groups.
 List<HistoryGroup> groupByMonth(List<AnalysisRecord> records) {
   final groups = <HistoryGroup>[];
 
@@ -98,7 +99,6 @@ List<HistoryGroup> groupByMonth(List<AnalysisRecord> records) {
   return groups;
 }
 
-/// Circular back affordance in the top-left of the page.
 class _BackButton extends StatelessWidget {
   const _BackButton({required this.onTap});
 
@@ -148,7 +148,6 @@ class _MonthHeading extends StatelessWidget {
   }
 }
 
-/// One scan: photo, date, skin type and the conditions that were found.
 class _HistoryCard extends StatelessWidget {
   const _HistoryCard({required this.record, required this.onTap});
 
@@ -156,8 +155,6 @@ class _HistoryCard extends StatelessWidget {
   static const double _badgeSize = 34;
   static const EdgeInsets _padding = EdgeInsets.all(14);
 
-  /// Gap between the date and the skin type, sized so the text column fills
-  /// the photo's height and the card stays as tall as the thumbnail.
   static const double _dateGap = 26;
 
   final AnalysisRecord record;
@@ -171,7 +168,7 @@ class _HistoryCard extends StatelessWidget {
     return Material(
       color: scheme.surfaceContainerLowest,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppRadius.card),
         side: BorderSide(color: scheme.outlineVariant),
       ),
       clipBehavior: Clip.antiAlias,
@@ -244,8 +241,6 @@ class _HistoryCard extends StatelessWidget {
   }
 }
 
-/// The scanned photo, cropped to a circle. Falls back to an icon for records
-/// saved without one, or on platforms that cannot read the file back.
 class _Thumbnail extends StatelessWidget {
   const _Thumbnail({required this.record, required this.size});
 

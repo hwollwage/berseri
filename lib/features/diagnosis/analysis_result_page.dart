@@ -1,125 +1,127 @@
-import 'package:berseri/core/components/app_colors.dart';
+import 'package:berseri/core/components/app_back_button.dart';
+import 'package:berseri/core/components/app_radius.dart';
+import 'package:berseri/core/components/app_spacing.dart';
+import 'package:berseri/core/components/brand.dart';
+import 'package:berseri/core/components/condition_chip.dart';
 import 'package:berseri/features/diagnosis/analysis_result_model.dart';
 import 'package:berseri/features/diagnosis/widgets/skin_photo.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 class AnalysisResultPage extends StatelessWidget {
-  final AnalysisResult result;
   const AnalysisResultPage({super.key, required this.result});
 
-  static const _months = [
+  final AnalysisResult result;
+
+  static const List<String> _months = [
     'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
   ];
 
+  /// e.g. `Oct 7, 2026` — the same format the history list uses.
   String get _dateText {
-    final d = result.date;
-    return '${_months[d.month - 1]} ${d.day}, ${d.year}';
+    final date = result.date;
+    return '${_months[date.month - 1]} ${date.day}, ${date.year}';
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [AppColors.cream, AppColors.peach],
-          ),
-        ),
-        child: SingleChildScrollView(
-          child: Stack(
-            children: [
-              Column(
-                children: [
-                  _Header(
-                    date: _dateText,
-                    skinType: result.skinType,
-                    onBack: () =>
-                        context.canPop() ? context.pop() : context.go('/'),
-                  ),
-                  const SizedBox(height: 190), // ruang untuk foto yang menimpa header
-                  _Body(result: result),
-                ],
-              ),
-              Positioned(
-                top: 200,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: Container(
-                    width: 200,
-                    height: 270,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: AppColors.orange, width: 2),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: SkinPhoto(path: result.imagePath),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _Header extends StatelessWidget {
-  final String date;
-  final String skinType;
-  final VoidCallback onBack;
-  const _Header({required this.date, required this.skinType, required this.onBack});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      height: 290,
-      decoration: const BoxDecoration(
-        color: AppColors.orange,
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(36),
-          bottomRight: Radius.circular(36),
-        ),
-      ),
-      child: SafeArea(
+      backgroundColor: scheme.surface,
+      body: SafeArea(
         bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.gutter,
+            AppSpacing.lg,
+            AppSpacing.gutter,
+            AppSpacing.xxxl,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              InkWell(
-                onTap: onBack,
-                customBorder: const CircleBorder(),
-                child: Container(
-                  width: 38,
-                  height: 38,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFFCE3B0),
-                    shape: BoxShape.circle,
+              AppBackButton(
+                onTap: () => context.canPop() ? context.pop() : context.go('/'),
+              ),
+
+              const SizedBox(height: 24),
+
+              // ── Skin type & scan date ───────────────────────────────────
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Skin type', style: BrandText.fieldLabel(context)),
+                        const SizedBox(height: 4),
+                        Text(
+                          result.skinTypeLabel,
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.6,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  child: const Icon(Icons.chevron_left, color: Colors.black87),
-                ),
+                  Text(
+                    _dateText,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ),
+
               const SizedBox(height: 20),
-              Text(date, style: const TextStyle(fontSize: 12, color: Colors.white)),
-              const SizedBox(height: 6),
+
+              _PhotoCard(path: result.imagePath),
+              const SizedBox(height: 28),
+
               Text(
-                'Skin Type - $skinType',
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
+                'Visible conditions',
+                style: BrandText.title(context),
               ),
+              const SizedBox(height: 10),
+              if (result.conditions.isEmpty)
+                Text(
+                  'Nothing detected.',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                )
+              else
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final condition in result.conditions)
+                      ConditionChip(label: condition, onPage: true),
+                  ],
+                ),
+
+              const SizedBox(height: 28),
+
+              Text(
+                'Recommended ingredients',
+                style: BrandText.title(context),
+              ),
+              const SizedBox(height: 10),
+              if (result.ingredients.isEmpty)
+                Text(
+                  'Nothing matched yet.',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                )
+              else
+                for (final ingredient in result.ingredients)
+                  _IngredientCard(ingredient: ingredient),
             ],
           ),
         ),
@@ -128,99 +130,103 @@ class _Header extends StatelessWidget {
   }
 }
 
-class _Body extends StatelessWidget {
-  final AnalysisResult result;
-  const _Body({required this.result});
+class _PhotoCard extends StatelessWidget {
+  const _PhotoCard({required this.path});
+  final String? path;
+  static const double _aspectRatio = 3 / 4;
+  static const double _maxHeight = 480;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 80, 20, 32), // 80 = sisa tinggi foto di bawah header
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Skin Conditions',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.brown,
+    final scheme = Theme.of(context).colorScheme;
+
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxHeight: _maxHeight),
+        child: Material(
+          color: scheme.surfaceContainerLowest,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.card),
+            side: BorderSide(color: scheme.outlineVariant),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: AspectRatio(
+            aspectRatio: _aspectRatio,
+            child: SkinPhoto(path: path),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _IngredientCard extends StatelessWidget {
+  const _IngredientCard({required this.ingredient});
+
+  final RecommendedIngredient ingredient;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(
+          color: scheme.outlineVariant.withValues(alpha: 0.6),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: scheme.primary,
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Text(
+                  ingredient.name.isNotEmpty
+                      ? ingredient.name[0].toUpperCase()
+                      : '?',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: scheme.onPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
-              Text(
-                '${result.conditions.length} detected',
-                style: const TextStyle(fontSize: 12),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: result.conditions
-                .map(
-                  (c) => Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Text(c, style: const TextStyle(fontSize: 13)),
-                  ),
-                )
-                .toList(),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'Recommended Ingredients',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: AppColors.brown,
             ),
-          ),
-          const SizedBox(height: 10),
-          ...result.ingredients.map(
-            (ing) => Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: Row(
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundColor: AppColors.orange,
-                    child: Text(
-                      ing.name[0],
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
+                  Text(
+                    ingredient.name,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.3,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(ing.name, style: const TextStyle(fontSize: 18)),
-                      Text(ing.purpose, style: const TextStyle(fontSize: 11)),
-                    ],
+                  const SizedBox(height: 3),
+                  Text(
+                    ingredient.purpose,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ],
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

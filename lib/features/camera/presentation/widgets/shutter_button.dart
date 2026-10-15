@@ -1,3 +1,4 @@
+import 'package:berseri/core/components/app_colors.dart';
 import 'package:flutter/material.dart';
 
 class ShutterButton extends StatefulWidget {
@@ -41,8 +42,8 @@ class _ShutterButtonState extends State<ShutterButton> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: _pressed
-                    ? const Color(0xFFD9A400)
-                    : const Color(0xFFF4B700),
+                    ? AppColors.cameraAccentPressed
+                    : AppColors.cameraAccent,
               ),
             ),
           ),

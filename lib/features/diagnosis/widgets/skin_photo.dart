@@ -11,9 +11,10 @@ class SkinPhoto extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (path == null) {
+      final scheme = Theme.of(context).colorScheme;
       return Container(
-        color: Colors.black12,
-        child: const Icon(Icons.face, size: 48, color: Colors.black38),
+        color: scheme.surfaceContainerHigh,
+        child: Icon(Icons.face, size: 48, color: scheme.onSurfaceVariant),
       );
     }
     // Di web, path dari kamera berupa blob URL

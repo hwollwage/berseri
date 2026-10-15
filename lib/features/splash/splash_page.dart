@@ -1,22 +1,15 @@
 import 'dart:async';
-import 'dart:ui';
 
+import 'package:berseri/core/components/brand.dart';
+import 'package:berseri/core/components/brand_art.dart';
+import 'package:berseri/core/components/glow_orb.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 
-/// Animated launch screen for Berseri.
-///
-/// Plays a short, staggered intro (mark -> wordmark -> tagline -> progress)
-/// then hands control to the app via [GoRouter]. Honors the platform
-/// "reduce motion" setting by jumping straight to the final frame.
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
 
-  /// How long the intro animation runs.
   static const Duration introDuration = Duration(milliseconds: 2200);
-
-  /// How long the splash stays on screen before routing onward.
   static const Duration holdDuration = Duration(milliseconds: 2600);
 
   @override
@@ -27,13 +20,13 @@ class _SplashPageState extends State<SplashPage>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
 
-  late final Animation<double> _markScale;
-  late final Animation<double> _markFade;
   late final Animation<double> _glowFade;
-  late final Animation<double> _nameFade;
-  late final Animation<Offset> _nameSlide;
-  late final Animation<double> _taglineFade;
-  late final Animation<Offset> _taglineSlide;
+  late final Animation<double> _heroFade;
+  late final Animation<double> _heroScale;
+  late final Animation<double> _headlineFade;
+  late final Animation<Offset> _headlineSlide;
+  late final Animation<double> _bodyFade;
+  late final Animation<Offset> _bodySlide;
   late final Animation<double> _progress;
 
   Timer? _navTimer;
@@ -47,49 +40,49 @@ class _SplashPageState extends State<SplashPage>
       duration: SplashPage.introDuration,
     );
 
-    // Staggered intervals: mark pops in first, then the wordmark,
-    // tagline, and finally the progress bar fills.
-    _markScale = CurvedAnimation(
-      parent: _controller,
-      curve: const Interval(0.00, 0.55, curve: Curves.easeOutBack),
-    );
-    _markFade = CurvedAnimation(
-      parent: _controller,
-      curve: const Interval(0.00, 0.35, curve: Curves.easeOut),
-    );
     _glowFade = CurvedAnimation(
       parent: _controller,
-      curve: const Interval(0.10, 0.70, curve: Curves.easeOut),
+      curve: const Interval(0.00, 0.60, curve: Curves.easeOut),
     );
-    _nameFade = CurvedAnimation(
+    _heroFade = CurvedAnimation(
       parent: _controller,
-      curve: const Interval(0.30, 0.65, curve: Curves.easeOut),
+      curve: const Interval(0.05, 0.55, curve: Curves.easeOut),
     );
-    _nameSlide = Tween<Offset>(
+    _heroScale = Tween<double>(begin: 0.92, end: 1).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.05, 0.70, curve: Curves.easeOutCubic),
+      ),
+    );
+    _headlineFade = CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.30, 0.70, curve: Curves.easeOut),
+    );
+    _headlineSlide = Tween<Offset>(
       begin: const Offset(0, 0.35),
       end: Offset.zero,
     ).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: const Interval(0.30, 0.70, curve: Curves.easeOutCubic),
+        curve: const Interval(0.30, 0.78, curve: Curves.easeOutCubic),
       ),
     );
-    _taglineFade = CurvedAnimation(
+    _bodyFade = CurvedAnimation(
       parent: _controller,
-      curve: const Interval(0.50, 0.85, curve: Curves.easeOut),
+      curve: const Interval(0.45, 0.80, curve: Curves.easeOut),
     );
-    _taglineSlide = Tween<Offset>(
+    _bodySlide = Tween<Offset>(
       begin: const Offset(0, 0.45),
       end: Offset.zero,
     ).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: const Interval(0.50, 0.90, curve: Curves.easeOutCubic),
+        curve: const Interval(0.45, 0.85, curve: Curves.easeOutCubic),
       ),
     );
     _progress = CurvedAnimation(
       parent: _controller,
-      curve: const Interval(0.60, 1.00, curve: Curves.easeInOutCubic),
+      curve: const Interval(0.55, 1.00, curve: Curves.easeInOutCubic),
     );
   }
 
@@ -97,7 +90,6 @@ class _SplashPageState extends State<SplashPage>
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    // Respect "reduce motion": show the settled state, no animation.
     if (MediaQuery.maybeOf(context)?.disableAnimations ?? false) {
       _controller.value = 1.0;
     } else if (!_controller.isAnimating && _controller.value == 0.0) {
@@ -109,9 +101,7 @@ class _SplashPageState extends State<SplashPage>
 
   void _goNext() {
     if (!mounted) return;
-    // Front-end only: always land on login. Swap to '/' (home) once
-    // session restoration is wired up.
-    context.go('/auth/login');
+    context.go('/onboarding');
   }
 
   @override
@@ -127,160 +117,189 @@ class _SplashPageState extends State<SplashPage>
     final cs = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
-    // Warm, "glow" palette derived from the amber seed so the splash
-    // feels like the rest of the app in both modes.
-    final topColor = isDark ? const Color(0xFF1C1405) : const Color(0xFFFFFBF2);
-    final midColor = isDark
-        ? Color.alphaBlend(cs.primary.withValues(alpha: 0.10), const Color(0xFF120D03))
-        : Color.alphaBlend(cs.primary.withValues(alpha: 0.14), Colors.white);
-    final bottomColor =
-        isDark ? const Color(0xFF0E0A02) : const Color(0xFFFFF3D6);
-
     return Scaffold(
-      body: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [topColor, midColor, bottomColor],
-            stops: const [0.0, 0.55, 1.0],
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Ambient glows, same treatment as the onboarding.
+          Positioned(
+            top: -120,
+            right: -100,
+            child: FadeTransition(
+              opacity: _glowFade,
+              child: GlowOrb(
+                size: 340,
+                color: cs.primary.withValues(alpha: isDark ? 0.30 : 0.26),
+              ),
+            ),
           ),
-        ),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // Ambient glow orbs behind the mark.
-            Positioned(
-              top: -90,
-              right: -70,
-              child: FadeTransition(
-                opacity: _glowFade,
-                child: _GlowOrb(
-                  size: 320,
-                  color: cs.primary.withValues(alpha: isDark ? 0.32 : 0.28),
-                ),
+          Positioned(
+            bottom: -150,
+            left: -110,
+            child: FadeTransition(
+              opacity: _glowFade,
+              child: GlowOrb(
+                size: 320,
+                color: cs.tertiary.withValues(alpha: isDark ? 0.22 : 0.20),
               ),
             ),
-            Positioned(
-              bottom: -120,
-              left: -90,
-              child: FadeTransition(
-                opacity: _glowFade,
-                child: _GlowOrb(
-                  size: 300,
-                  color: cs.tertiary.withValues(alpha: isDark ? 0.24 : 0.22),
+          ),
+
+          SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(24, 10, 24, 0),
+                  child: BrandWordmark(),
                 ),
-              ),
-            ),
 
-            SafeArea(
-              child: Column(
-                children: [
-                  const Spacer(flex: 3),
-
-                  // Brand mark.
-                  FadeTransition(
-                    opacity: _markFade,
-                    child: ScaleTransition(
-                      scale: _markScale,
-                      child: const _BerseriMark(size: 112),
-                    ),
-                  ),
-
-                  const SizedBox(height: 28),
-
-                  // Wordmark.
-                  FadeTransition(
-                    opacity: _nameFade,
-                    child: SlideTransition(
-                      position: _nameSlide,
-                      child: Semantics(
-                        header: true,
-                        label: 'Berseri',
-                        child: Text.rich(
-                          TextSpan(
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 40,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.8,
-                              color: cs.onSurface,
-                            ),
-                            children: [
-                              const TextSpan(text: 'Ber'),
-                              TextSpan(
-                                text: 'seri',
-                                style: TextStyle(color: cs.primary),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // Tagline.
-                  FadeTransition(
-                    opacity: _taglineFade,
-                    child: SlideTransition(
-                      position: _taglineSlide,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 48),
-                        child: Text(
-                          'Understand your skin,\nfind the routine that fits it.',
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 15,
-                            height: 1.45,
-                            fontWeight: FontWeight.w500,
-                            color: cs.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const Spacer(flex: 2),
-
-                  // Progress + caption pinned near the bottom.
-                  FadeTransition(
-                    opacity: _taglineFade,
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        SizedBox(
-                          width: 132,
+                        const Spacer(flex: 3),
+
+                        Center(
+                          child: FadeTransition(
+                            opacity: _heroFade,
+                            child: ScaleTransition(
+                              scale: _heroScale,
+                              child: const _Hero(),
+                            ),
+                          ),
+                        ),
+
+                        const Spacer(flex: 3),
+
+                        FadeTransition(
+                          opacity: _headlineFade,
+                          child: SlideTransition(
+                            position: _headlineSlide,
+                            child: Semantics(
+                              header: true,
+                              child: Text(
+                                'Understand your skin,\n'
+                                'find the routine that fits it.',
+                                style: BrandText.headline(
+                                  context,
+                                  fontSize: 28,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        FadeTransition(
+                          opacity: _bodyFade,
+                          child: SlideTransition(
+                            position: _bodySlide,
+                            child: Text(
+                              'Powered by on-device skin analysis.',
+                              style: BrandText.body(context),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 28),
+
+                        FadeTransition(
+                          opacity: _bodyFade,
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(99),
                             child: AnimatedBuilder(
                               animation: _progress,
                               builder: (context, _) => LinearProgressIndicator(
                                 value: _progress.value,
-                                minHeight: 4,
-                                backgroundColor:
-                                    cs.onSurface.withValues(alpha: 0.08),
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(cs.primary),
+                                minHeight: 6,
+                                backgroundColor: cs.onSurface.withValues(
+                                  alpha: 0.14,
+                                ),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  cs.primary,
+                                ),
                               ),
                             ),
-                          ),
-                        ),
-                        const SizedBox(height: 18),
-                        Text(
-                          'Powered by on-device skin analysis',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            letterSpacing: 0.2,
-                            color: cs.onSurfaceVariant.withValues(alpha: 0.75),
                           ),
                         ),
                       ],
                     ),
                   ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-                  const SizedBox(height: 40),
-                ],
+class _Hero extends StatelessWidget {
+  const _Hero();
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    return Ambient(
+      period: const Duration(seconds: 6),
+      child: SizedBox(
+        width: 216,
+        height: 216,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Spinning(
+              cycles: 1,
+              child: DashedRing(
+                size: 200,
+                color: cs.primary.withValues(alpha: 0.4),
+              ),
+            ),
+            const Floating(
+              amplitude: 5,
+              cycles: 1.2,
+              child: _BerseriMark(size: 104),
+            ),
+            Positioned(
+              left: 4,
+              top: 34,
+              child: Floating(
+                amplitude: 4,
+                cycles: 1.8,
+                phase: 0.2,
+                child: Pulsing(
+                  amount: 0.25,
+                  cycles: 1.8,
+                  phase: 0.2,
+                  child: Sparkle(
+                    size: 16,
+                    color: cs.primary.withValues(alpha: 0.6),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              right: 8,
+              bottom: 40,
+              child: Floating(
+                amplitude: 3,
+                cycles: 2.2,
+                phase: 0.65,
+                child: Pulsing(
+                  amount: 0.3,
+                  cycles: 2.2,
+                  phase: 0.65,
+                  child: Sparkle(
+                    size: 12,
+                    color: cs.primary.withValues(alpha: 0.45),
+                  ),
+                ),
               ),
             ),
           ],
@@ -290,8 +309,6 @@ class _SplashPageState extends State<SplashPage>
   }
 }
 
-/// The app's brand mark: a rounded gradient badge with a soft inner glow
-/// and a face-analysis glyph.
 class _BerseriMark extends StatelessWidget {
   const _BerseriMark({required this.size});
 
@@ -310,7 +327,10 @@ class _BerseriMark extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [cs.primary, cs.tertiary],
+          colors: [
+            Color.lerp(cs.primary, Colors.white, isDark ? 0.10 : 0.22)!,
+            cs.primary,
+          ],
         ),
         boxShadow: [
           BoxShadow(
@@ -324,7 +344,6 @@ class _BerseriMark extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Inner highlight for a glossy, skincare-product feel.
           Positioned(
             top: size * 0.08,
             child: Container(
@@ -349,31 +368,6 @@ class _BerseriMark extends StatelessWidget {
             color: cs.onPrimary,
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// A blurred, radial "glow" used as ambient background decoration.
-class _GlowOrb extends StatelessWidget {
-  const _GlowOrb({required this.size, required this.color});
-
-  final double size;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return ImageFiltered(
-      imageFilter: ImageFilter.blur(sigmaX: 70, sigmaY: 70),
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: RadialGradient(
-            colors: [color, color.withValues(alpha: 0.0)],
-          ),
-        ),
       ),
     );
   }

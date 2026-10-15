@@ -2,9 +2,9 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui';
 
+import 'package:berseri/core/components/app_colors.dart';
+import 'package:berseri/core/components/app_spacing.dart';
 import 'package:flutter/material.dart';
-
-const _brand = Color(0xFFF4B700);
 
 class AnalysisLoadingOverlay extends StatefulWidget {
   const AnalysisLoadingOverlay({super.key});
@@ -76,7 +76,10 @@ class _AnalysisLoadingOverlayState extends State<AnalysisLoadingOverlay>
                                 height: size,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  border: Border.all(color: _brand, width: 3),
+                                  border: Border.all(
+                                    color: AppColors.cameraAccent,
+                                    width: 3,
+                                  ),
                                 ),
                               ),
                             );
@@ -93,34 +96,39 @@ class _AnalysisLoadingOverlayState extends State<AnalysisLoadingOverlay>
                                 height: 84,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 4,
-                                  color: _brand,
+                                  color: AppColors.cameraAccent,
                                 ),
                               ),
-                              Icon(Icons.auto_awesome,
-                                  color: _brand, size: 30),
+                              Icon(
+                                Icons.auto_awesome,
+                                color: AppColors.cameraAccent,
+                                size: 30,
+                              ),
                             ],
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: AppSpacing.xxl),
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 300),
                     child: Text(
                       _messages[_index],
                       key: ValueKey(_index),
-                      style: const TextStyle(
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         color: Colors.white,
-                        fontSize: 17,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  const Text(
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
                     'Please keep the app open',
-                    style: TextStyle(color: Colors.white70, fontSize: 13),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.white70,
+                    ),
                   ),
                 ],
               ),

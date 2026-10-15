@@ -31,6 +31,11 @@ class _CapturedPhotoState extends State<CapturedPhoto> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final messageStyle = theme.textTheme.bodyMedium?.copyWith(
+      color: Colors.white,
+    );
+
     return FutureBuilder<Uint8List>(
       future: _bytes,
       builder: (context, snapshot) {
@@ -38,10 +43,7 @@ class _CapturedPhotoState extends State<CapturedPhoto> {
         if (bytes == null) {
           return Center(
             child: snapshot.hasError
-                ? const Text(
-                    "couldn't read the photo",
-                    style: TextStyle(color: Colors.white),
-                  )
+                ? Text("couldn't read the photo", style: messageStyle)
                 : const CircularProgressIndicator(),
           );
         }
@@ -51,11 +53,8 @@ class _CapturedPhotoState extends State<CapturedPhoto> {
           fit: BoxFit.cover,
           cacheWidth: 1080,
           gaplessPlayback: true,
-          errorBuilder: (context, error, stackTrace) => const Center(
-            child: Text(
-              "couldn't display the photo",
-              style: TextStyle(color: Colors.white),
-            ),
+          errorBuilder: (context, error, stackTrace) => Center(
+            child: Text("couldn't display the photo", style: messageStyle),
           ),
         );
       },

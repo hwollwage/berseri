@@ -1,20 +1,9 @@
+import 'package:berseri/core/components/app_colors.dart';
+import 'package:berseri/core/components/app_radius.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-
-/// Warm, gender-neutral skincare palette: cream surfaces with a sunny
-/// amber-yellow accent.
-///
-/// Single source of truth for the app's look. Every screen reads colours from
-/// `Theme.of(context).colorScheme`, so re-skinning happens here only:
-///   * page background  - cream `surface` (#FDF6E8)
-///   * cards/fields     - white `surfaceContainerLowest`
-///   * accent/CTA       - amber `primary` (#F59E0B)
-///   * nav bar          - warm `surfaceContainer` (#FEF1D6)
 abstract final class AppTheme {
-  static const Color _amber = Color(0xFFF59E0B);
-  static const Color _amberBright = Color(0xFFFBBF24);
-
   static final ThemeData light = _build(Brightness.light);
   static final ThemeData dark = _build(Brightness.dark);
 
@@ -47,10 +36,10 @@ abstract final class AppTheme {
 
     final scheme =
         ColorScheme.fromSeed(
-          seedColor: _amber,
+          seedColor: AppColors.amber,
           brightness: brightness,
         ).copyWith(
-          primary: isDark ? _amberBright : _amber,
+          primary: isDark ? AppColors.amberBright : AppColors.amber,
           onPrimary: isDark ? const Color(0xFF3A2703) : Colors.white,
           primaryContainer: isDark
               ? const Color(0xFF6B4A06)
@@ -84,8 +73,6 @@ abstract final class AppTheme {
           outline: isDark ? const Color(0xFF8B7F6B) : const Color(0xFFE0DAD1),
         );
 
-    // google_fonts ships TextTheme helpers typed against its own material
-    // library, so apply the family style by style instead.
     final textTheme = _jakarta(base.textTheme).apply(
       bodyColor: scheme.onSurface,
       displayColor: scheme.onSurface,
@@ -134,7 +121,7 @@ abstract final class AppTheme {
           minimumSize: const Size(0, 52),
           padding: const EdgeInsets.symmetric(horizontal: 24),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppRadius.button),
           ),
           textStyle: textTheme.labelLarge?.copyWith(
             fontSize: 15,
@@ -160,16 +147,40 @@ abstract final class AppTheme {
         prefixIconColor: scheme.onSurfaceVariant,
         suffixIconColor: scheme.onSurfaceVariant,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(AppRadius.field),
           borderSide: BorderSide(color: scheme.outlineVariant),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(AppRadius.field),
           borderSide: BorderSide(color: scheme.outlineVariant),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(AppRadius.field),
           borderSide: BorderSide(color: scheme.primary, width: 1.5),
+        ),
+      ),
+
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.field),
+        ),
+      ),
+
+      dialogTheme: DialogThemeData(
+        backgroundColor: scheme.surfaceContainerLowest,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.card),
+        ),
+        titleTextStyle: textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.2,
+          color: scheme.onSurface,
+        ),
+        contentTextStyle: textTheme.bodyMedium?.copyWith(
+          color: scheme.onSurfaceVariant,
+          height: 1.45,
         ),
       ),
 

@@ -1,20 +1,24 @@
+import 'package:berseri/core/components/app_spacing.dart';
 import 'package:flutter/material.dart';
 
 class CustomTextfield extends StatefulWidget {
   final String label;
   final String? hint;
-  final IconData icon;
+
+  final IconData? icon;
+
   final TextEditingController? controller;
   final bool isPassword;
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
   final String? Function(String?)? validator;
+
   final Widget? labelAction;
 
   const CustomTextfield({
     super.key,
     required this.label,
-    required this.icon,
+    this.icon,
     this.hint,
     this.controller,
     this.isPassword = false,
@@ -31,32 +35,32 @@ class CustomTextfield extends StatefulWidget {
 class _CustomTextfieldState extends State<CustomTextfield> {
   late bool obsecure = widget.isPassword;
 
-  OutlineInputBorder border(Color color, {double width = 1}) {
-    return OutlineInputBorder(
-      borderRadius: BorderRadius.circular(14),
-      borderSide: BorderSide(color: color, width: width),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
 
     return Column(
-      crossAxisAlignment: .start,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          mainAxisAlignment: .spaceBetween,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              widget.label,
-              style: const TextStyle(fontWeight: FontWeight.w600),
+            // Expanded so a long label (or a large text scale) wraps instead
+            // of overflowing the row.
+            Expanded(
+              child: Text(
+                widget.label,
+                style: theme.textTheme.labelLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
             ),
             if (widget.labelAction != null) widget.labelAction!,
           ],
         ),
 
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
 
         TextFormField(
           controller: widget.controller,
@@ -66,9 +70,9 @@ class _CustomTextfieldState extends State<CustomTextfield> {
           validator: widget.validator,
           decoration: InputDecoration(
             hintText: widget.hint,
-            filled: true,
-            fillColor: cs.surfaceContainerLowest,
-            prefixIcon: Icon(widget.icon, size: 20),
+            prefixIcon: widget.icon == null
+                ? null
+                : Icon(widget.icon, size: 20),
             suffixIcon: widget.isPassword
                 ? IconButton(
                     icon: Icon(
@@ -80,11 +84,6 @@ class _CustomTextfieldState extends State<CustomTextfield> {
                     onPressed: () => setState(() => obsecure = !obsecure),
                   )
                 : null,
-            contentPadding: const EdgeInsets.symmetric(vertical: 16),
-            enabledBorder: border(cs.outlineVariant),
-            focusedBorder: border(cs.primary, width: 1.5),
-            errorBorder: border(cs.error),
-            focusedErrorBorder: border(cs.error, width: 1.5),
           ),
         ),
       ],
