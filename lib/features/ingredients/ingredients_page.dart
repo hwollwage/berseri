@@ -1,3 +1,4 @@
+import 'package:berseri/core/components/app_header.dart';
 import 'package:berseri/core/components/app_radius.dart';
 import 'package:berseri/features/ingredients/ingredient.dart';
 import 'package:berseri/features/ingredients/ingredient_detail_page.dart';
@@ -43,6 +44,13 @@ class _IngredientsPageState extends State<IngredientsPage> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+              child: const AppHeader(),
+            ),
+
+            const SizedBox(height: 26),
+
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
               child: Text(
                 'Ingredients',
                 style: theme.textTheme.headlineMedium?.copyWith(

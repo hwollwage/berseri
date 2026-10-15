@@ -188,7 +188,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
                   // ── Create account button ───────────────────────────────
                   CustomButton(
-                    text: 'Create account >',
+                    text: 'Create account',
                     onPressed: _submit,
                   ),
 

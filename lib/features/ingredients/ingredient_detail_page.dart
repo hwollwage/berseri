@@ -226,7 +226,7 @@ class _PairingCard extends StatelessWidget {
               ),
             );
 
-            Navigator.of(context).push(
+            Navigator.of(context).pushReplacement(
               MaterialPageRoute<void>(
                 builder: (context) => IngredientDetailPage(ingredient: target),
               ),

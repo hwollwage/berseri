@@ -1,3 +1,4 @@
+import 'package:berseri/core/components/app_header.dart';
 import 'package:berseri/core/components/app_radius.dart';
 import 'package:berseri/core/components/app_spacing.dart';
 import 'package:berseri/core/components/brand.dart';
@@ -45,7 +46,7 @@ class DashboardPage extends ConsumerWidget {
                 AppSpacing.navBarInset,
               ),
               children: [
-                _Header(name: profile?.name),
+                const AppHeader(),
                 const SizedBox(height: 26),
                 _Greeting(name: profile?.name),
                 const SizedBox(height: 24),
@@ -73,67 +74,6 @@ class DashboardPage extends ConsumerWidget {
       ),
     );
   }
-}
-
-class _Header extends StatelessWidget {
-  const _Header({this.name});
-
-  final String? name;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        const BrandWordmark(),
-        Semantics(
-          button: true,
-          label: 'Open profile',
-          child: ExcludeSemantics(
-            child: Material(
-              color: scheme.surfaceContainerLowest,
-              shape: CircleBorder(
-                side: BorderSide(color: scheme.outlineVariant),
-              ),
-              child: InkWell(
-                customBorder: const CircleBorder(),
-                onTap: () => context.push('/profile'),
-                child: SizedBox(
-                  width: 44,
-                  height: 44,
-                  child: Center(
-                    child: Text(
-                      _initials(name),
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: scheme.onSurface,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-String _initials(String? name) {
-  final words = (name ?? '')
-      .trim()
-      .split(RegExp(r'\s+'))
-      .where((word) => word.isNotEmpty)
-      .toList(growable: false);
-
-  if (words.isEmpty) return 'B';
-
-  return words.take(2).map((word) => word[0].toUpperCase()).join();
 }
 
 class _Greeting extends StatelessWidget {

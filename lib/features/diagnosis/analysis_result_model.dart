@@ -23,14 +23,14 @@ List<Ingredient> matchedIngredientsFor(AnalysisRecord record) {
 }
 
 class AnalysisResult {
-  final String skinType;
+  final String skinTypeLabel;
   final List<String> conditions;
   final List<RecommendedIngredient> ingredients;
   final DateTime date;
   final String? imagePath;
 
   const AnalysisResult({
-    required this.skinType,
+    required this.skinTypeLabel,
     required this.conditions,
     required this.ingredients,
     required this.date,
@@ -39,7 +39,7 @@ class AnalysisResult {
 
   factory AnalysisResult.fromRecord(AnalysisRecord record) {
     return AnalysisResult(
-      skinType: record.skinType,
+      skinTypeLabel: record.skinTypeLabel,
       conditions: record.conditions,
       ingredients: matchedIngredientsFor(record)
           .map(
@@ -52,9 +52,8 @@ class AnalysisResult {
     );
   }
 
-  // Data contoh buat ngetes UI. Ganti dengan hasil dari backend nanti.
   factory AnalysisResult.demo({String? imagePath}) => AnalysisResult(
-        skinType: 'Normal',
+        skinTypeLabel: 'Normal',
         conditions: const ['Redness', 'Dark Spot', 'Acne'],
         ingredients: const [
           RecommendedIngredient('Niacinamide', 'For dark spot'),

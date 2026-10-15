@@ -96,14 +96,7 @@ class AnalysisTipsPage extends StatelessWidget {
                   width: double.infinity,
                   child: FilledButton(
                     onPressed: onReady,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text("I'm Ready"),
-                        const SizedBox(width: AppSpacing.sm),
-                        const Icon(Icons.chevron_right, size: 22),
-                      ],
-                    ),
+                    child: const Text("I'm Ready"),
                   ),
                 ),
               ),

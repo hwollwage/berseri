@@ -163,7 +163,7 @@ class _QuestionnairePageState extends State<QuestionnairePage> {
                                 ),
                               ),
                               child: Text(
-                                'Next  >',
+                                'Next',
                                 style: theme.textTheme.labelLarge?.copyWith(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,

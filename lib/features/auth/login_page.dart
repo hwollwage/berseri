@@ -133,7 +133,7 @@ class _LoginPageState extends State<LoginPage> {
                   const SizedBox(height: AppSpacing.xxl),
 
                   // ── Login button ────────────────────────────────────────
-                  CustomButton(text: 'Login >', onPressed: _submit),
+                  CustomButton(text: 'Login', onPressed: _submit),
 
                   const SizedBox(height: 24),
 
