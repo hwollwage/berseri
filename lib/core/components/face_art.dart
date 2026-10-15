@@ -26,7 +26,7 @@ class FaceArt extends StatelessWidget {
         ink: cs.onSurface.withValues(alpha: 0.85),
         blush: cs.primary.withValues(alpha: 0.45),
         hair: Color.lerp(cs.primary, cs.onPrimaryContainer, 0.55)!,
-        shadow: cs.shadow.withValues(alpha: 0.16),
+        shadow: cs.shadow.withValues(alpha: 0.13),
       ),
     );
   }
@@ -60,7 +60,7 @@ class _FacePainter extends CustomPainter {
       head,
       Paint()
         ..color = shadow
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, w * 0.07),
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, w * 0.05),
     );
 
     canvas.drawPath(head, Paint()..color = fill);

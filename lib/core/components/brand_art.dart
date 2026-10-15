@@ -145,109 +145,87 @@ class Pulsing extends StatelessWidget {
   }
 }
 
-class Spinning extends StatelessWidget {
-  const Spinning({super.key, required this.child, this.cycles = 1});
+class ScanSweep extends StatelessWidget {
+  const ScanSweep({
+    super.key,
+    required this.line,
+    required this.glow,
+    this.trail = 34,
+    this.thickness = 1.8,
+    this.cycles = 1,
+  });
 
-  final Widget child;
+  final Color line;
+  final Color glow;
+  final double trail;
+  final double thickness;
+
   final double cycles;
 
   @override
   Widget build(BuildContext context) {
     final clock = Ambient.of(context);
-    if (clock == null) return child;
+    if (clock == null) return const SizedBox.shrink();
 
-    return AnimatedBuilder(
-      animation: clock,
-      builder: (context, child) => Transform.rotate(
-        angle: clock.value * cycles * 2 * math.pi,
-        child: child,
-      ),
-      child: child,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final travel = constraints.maxHeight - trail - thickness;
+
+        return AnimatedBuilder(
+          animation: clock,
+          builder: (context, _) => Stack(
+            children: [
+              Positioned(
+                left: 0,
+                right: 0,
+                top: (clock.value * cycles % 1) * travel,
+                child: ShaderMask(
+                  blendMode: BlendMode.dstIn,
+                  shaderCallback: (bounds) => LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: const [
+                      Colors.transparent,
+                      Colors.white,
+                      Colors.white,
+                      Colors.transparent,
+                    ],
+                    stops: const [0, 0.12, 0.88, 1],
+                  ).createShader(bounds),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        height: trail,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [glow.withValues(alpha: 0), glow],
+                          ),
+                        ),
+                      ),
+                      Container(
+                        height: thickness,
+                        decoration: BoxDecoration(
+                          color: line,
+                          boxShadow: [
+                            BoxShadow(
+                              color: glow,
+                              blurRadius: 10,
+                              spreadRadius: 1,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
-}
-
-// Shapes
-class Sparkle extends StatelessWidget {
-  const Sparkle({super.key, required this.size, required this.color});
-
-  final double size;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      size: Size.square(size),
-      painter: _SparklePainter(color),
-    );
-  }
-}
-
-/// A thin dashed circle, used as a soft "scan reticle" behind the artwork.
-class DashedRing extends StatelessWidget {
-  const DashedRing({super.key, required this.size, required this.color});
-
-  final double size;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      size: Size.square(size),
-      painter: _DashedRingPainter(color),
-    );
-  }
-}
-
-class _SparklePainter extends CustomPainter {
-  const _SparklePainter(this.color);
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final c = size.center(Offset.zero);
-    final r = size.shortestSide / 2;
-    final waist = r * 0.16;
-
-    final path = Path()
-      ..moveTo(c.dx, c.dy - r)
-      ..quadraticBezierTo(c.dx + waist, c.dy - waist, c.dx + r, c.dy)
-      ..quadraticBezierTo(c.dx + waist, c.dy + waist, c.dx, c.dy + r)
-      ..quadraticBezierTo(c.dx - waist, c.dy + waist, c.dx - r, c.dy)
-      ..quadraticBezierTo(c.dx - waist, c.dy - waist, c.dx, c.dy - r)
-      ..close();
-
-    canvas.drawPath(path, Paint()..color = color);
-  }
-
-  @override
-  bool shouldRepaint(_SparklePainter oldDelegate) => oldDelegate.color != color;
-}
-
-class _DashedRingPainter extends CustomPainter {
-  const _DashedRingPainter(this.color);
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const segments = 72;
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2
-      ..strokeCap = StrokeCap.round;
-
-    final rect = (Offset.zero & size).deflate(1);
-    const sweep = 2 * math.pi / segments;
-
-    for (var i = 0; i < segments; i += 2) {
-      canvas.drawArc(rect, i * sweep, sweep * 0.7, false, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DashedRingPainter oldDelegate) =>
-      oldDelegate.color != color;
 }
