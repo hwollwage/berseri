@@ -18,11 +18,8 @@ import 'package:berseri/features/splash/splash_page.dart';
 import 'package:go_router/go_router.dart';
 
 final router = GoRouter(
-  // Buat ngetes halamanmu, ubah sementara jadi '/analysis-loading'
-  // atau '/questionnaire'. Balikin ke '/splash' sebelum commit.
   initialLocation: '/splash',
   routes: [
-
     GoRoute(
       path: '/splash',
       name: 'splash',
@@ -107,7 +104,6 @@ final router = GoRouter(
       builder: (context, state) => const QuestionnairePage(),
     ),
 
-    // ===== route punya wahyu =====
     GoRoute(
       path: '/analysis-loading',
       name: 'analysis-loading',
@@ -122,18 +118,16 @@ final router = GoRouter(
         result: (state.extra as AnalysisResult?) ?? AnalysisResult.demo(),
       ),
     ),
-    // =============================
 
     GoRoute(
       path: '/ingredient-detail',
       name: 'ingredient-detail',
       builder: (context, state) {
-        final ingredient = state.extra as Ingredient? ?? ingredientLibrary.first;
+        final ingredient =
+            state.extra as Ingredient? ?? ingredientLibrary.first;
         return IngredientDetailPage(ingredient: ingredient);
       },
     ),
-
-    // lanjutin routenya...
   ],
 
   // ini buat cek status login
