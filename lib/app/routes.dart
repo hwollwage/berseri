@@ -17,8 +17,10 @@ import 'package:berseri/features/routine/routine_page.dart';
 import 'package:berseri/features/splash/splash_page.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:berseri/features/classification/onnx_test_page.dart'; // TODO test
+
 final router = GoRouter(
-  initialLocation: '/splash',
+  initialLocation: '/onnx-test',
   routes: [
     GoRoute(
       path: '/splash',
@@ -90,6 +92,12 @@ final router = GoRouter(
       path: '/diagnosis',
       name: 'diagnosis',
       builder: (context, state) => const DiagnosisPage(),
+    ),
+
+    GoRoute(
+      path: '/onnx-test',
+      name: 'onnx-test',
+      builder: ((context, state) => const OnnxTestPage()),
     ),
 
     GoRoute(

@@ -1,41 +1,52 @@
 import 'dart:io';
 
-import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:berseri/features/classification/skin_classification.dart';
-
-// masih placeholder
+import 'package:berseri/features/classification/skin_onnx_service.dart';
 
 class ClassificationRepository {
-  final Dio _dio;
+  final SkinOnnxService _onnxService;
 
-  ClassificationRepository(
-    this._dio
-  );
+  ClassificationRepository(this._onnxService);
 
   Future<SkinClassification> classifyImage(File image) async {
-    final formData = FormData.fromMap({
-      'file': await MultipartFile.fromFile(image.path, filename: 'photo_berseri.jpg'),
-    });
+    final detections = await _onnxService.predict(image);
 
-    final response = await _dio.post(
-      '/predict', // path endpoint flask di HF sp
-      data: formData,
+    if (detections.isEmpty) {
+      return const SkinClassification(
+        label: 'No condition detected',
+        confidence: 0,
+        conditions: [],
+      );
+    }
+
+    final best = detections.first;
+
+    final conditions = detections
+        .map((detection) => detection.label)
+        .toSet()
+        .toList(growable: false);
+
+    return SkinClassification(
+      label: best.label,
+      confidence: best.confidence,
+      conditions: conditions,
     );
+  }
 
-    return SkinClassification.fromJson(response.data as Map<String, dynamic>);
+  Future<void> dispose() async {
+    await _onnxService.dispose();
   }
 }
 
-final dioProvider = Provider<Dio>((ref) {
-  return Dio(BaseOptions(
-    baseUrl: 'http://localhost:8000',
-    connectTimeout: const Duration(seconds: 15),
-    receiveTimeout: const Duration(seconds: 15),
-  ));
-});
+final classificationRepositoryProvider = Provider<ClassificationRepository>((
+  ref,
+) {
+  final repository = ClassificationRepository(SkinOnnxService());
 
-final classificationRepositoryProvider = Provider<ClassificationRepository>((ref) {
-  return ClassificationRepository(ref.watch(dioProvider));
+  ref.onDispose(() {
+    repository.dispose();
+  });
+
+  return repository;
 });
