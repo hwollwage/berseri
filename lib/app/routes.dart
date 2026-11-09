@@ -2,6 +2,7 @@ import 'package:berseri/features/analysis/history_page.dart';
 import 'package:berseri/features/auth/login_page.dart';
 import 'package:berseri/features/auth/register_page.dart';
 import 'package:berseri/features/camera/presentation/pages/camera_page.dart';
+import 'package:berseri/features/clinics/clinics_page.dart';
 import 'package:berseri/features/diagnosis/analysis_loading_page.dart';
 import 'package:berseri/features/diagnosis/analysis_result_model.dart';
 import 'package:berseri/features/diagnosis/analysis_result_page.dart';
@@ -17,10 +18,10 @@ import 'package:berseri/features/routine/routine_page.dart';
 import 'package:berseri/features/splash/splash_page.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:berseri/features/classification/onnx_test_page.dart'; // TODO test
+
 
 final router = GoRouter(
-  initialLocation: '/onnx-test',
+  initialLocation: '/splash',
   routes: [
     GoRoute(
       path: '/splash',
@@ -83,6 +84,12 @@ final router = GoRouter(
     ),
 
     GoRoute(
+      path: '/clinics',
+      name: 'clinics',
+      builder: (context, state) => const ClinicsPage(),
+    ),
+
+    GoRoute(
       path: '/camera',
       name: 'camera',
       builder: (context, state) => const CameraPage(),
@@ -92,12 +99,6 @@ final router = GoRouter(
       path: '/diagnosis',
       name: 'diagnosis',
       builder: (context, state) => const DiagnosisPage(),
-    ),
-
-    GoRoute(
-      path: '/onnx-test',
-      name: 'onnx-test',
-      builder: ((context, state) => const OnnxTestPage()),
     ),
 
     GoRoute(

@@ -7,6 +7,7 @@ import 'package:berseri/core/components/custom_nav_bar.dart';
 import 'package:berseri/core/components/text_link.dart';
 import 'package:berseri/features/analysis/analysis_history_provider.dart';
 import 'package:berseri/features/analysis/analysis_record.dart';
+import 'package:berseri/features/clinics/nearby_clinics_card.dart';
 import 'package:berseri/features/diagnosis/analysis_result_model.dart';
 import 'package:berseri/features/ingredients/ingredient.dart';
 import 'package:berseri/features/ingredients/ingredient_detail_page.dart';
@@ -55,6 +56,11 @@ class DashboardPage extends ConsumerWidget {
                 _LatestScanCard(record: latest),
                 const SizedBox(height: 16),
                 _LibraryCard(onOpen: onOpenIngredients),
+                const SizedBox(height: 16),
+                NearbyClinicsCard(
+                  onSeeAll: () => context.push('/clinics'),
+                  onClinicTap: (_) => context.push('/clinics'),
+                ),
               ],
             ),
             Positioned(
@@ -95,7 +101,6 @@ class _Greeting extends StatelessWidget {
     );
   }
 }
-
 
 class _ScanCard extends StatelessWidget {
   const _ScanCard({required this.onStart});
