@@ -1,10 +1,7 @@
 class AuthRules {
   static const int minPasswordLength = 8;
-
-  static const int minUsernameLength = 3;
-
+  static const int minFullNameLength = 2;
   static final RegExp _email = RegExp(r'^[\w.+-]+@[\w-]+(\.[\w-]+)+$');
-  static final RegExp _username = RegExp(r'^[A-Za-z0-9._-]+$');
   static final RegExp _uniqueCharacter = RegExp(r'[^A-Za-z0-9]');
 
   static bool isEmail(String value) => _email.hasMatch(value.trim());
@@ -29,20 +26,9 @@ class AuthRules {
     return null;
   }
 
-  static String? loginIdentifierError(String value) {
-    final identifier = value.trim();
-    if (identifier.isEmpty) return 'Please enter your username or email.';
-    if (identifier.contains('@')) {
-      return isEmail(identifier)
-          ? null
-          : 'Enter a valid email address, e.g. name@gmail.com.';
-    }
-    if (identifier.length < minUsernameLength) {
-      return 'Username must be at least $minUsernameLength characters.';
-    }
-    if (!_username.hasMatch(identifier)) {
-      return 'Username may only contain letters, numbers, dot, dash '
-          'or underscore.';
+  static String? fullNameError(String value) {
+    if (value.trim().length < minFullNameLength) {
+      return 'Please enter your full name.';
     }
     return null;
   }

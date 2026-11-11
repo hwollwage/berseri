@@ -3,8 +3,9 @@ import 'package:berseri/core/components/brand.dart';
 import 'package:berseri/core/components/custom_button.dart';
 import 'package:berseri/core/components/custom_logo.dart';
 import 'package:berseri/core/components/custom_textfield.dart';
+import 'package:berseri/features/auth/auth_errors.dart';
+import 'package:berseri/features/auth/auth_repository.dart';
 import 'package:berseri/features/auth/auth_rules.dart';
-import 'package:berseri/features/auth/registered_accounts_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -18,14 +19,16 @@ class RegisterPage extends ConsumerStatefulWidget {
 
 class _RegisterPageState extends ConsumerState<RegisterPage> {
   final _emailController = TextEditingController();
-  final _usernameController = TextEditingController();
+  final _fullNameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+
+  bool _submitting = false;
 
   @override
   void dispose() {
     _emailController.dispose();
-    _usernameController.dispose();
+    _fullNameController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
@@ -35,9 +38,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     final emailError = AuthRules.emailError(_emailController.text);
     if (emailError != null) return emailError;
 
-    if (_usernameController.text.trim().isEmpty) {
-      return 'Please enter a username.';
-    }
+    final nameError = AuthRules.fullNameError(_fullNameController.text);
+    if (nameError != null) return nameError;
 
     final passwordError = AuthRules.passwordError(_passwordController.text);
     if (passwordError != null) return passwordError;
@@ -53,45 +55,41 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  Future<void> _warnAccountExists(String email) {
-    return showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Account already exists'),
-        content: Text(
-          'An account for $email is already made. Please log in with that '
-          'account instead.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Login'),
-          ),
-        ],
-      ),
-    );
-  }
-
   Future<void> _submit() async {
+    if (_submitting) return;
+
     final error = _validationError();
     if (error != null) {
       _showMessage(error);
       return;
     }
 
-    final email = _emailController.text.trim();
-    final accounts = ref.read(registeredAccountsProvider.notifier);
+    setState(() => _submitting = true);
 
-    if (accounts.contains(email)) {
-      await _warnAccountExists(email);
+    try {
+      final response = await ref
+          .read(authRepositoryProvider)
+          .signUp(
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+            fullName: _fullNameController.text.trim(),
+          );
+
       if (!mounted) return;
-      context.go('/auth/login');
-      return;
-    }
 
-    accounts.add(email);
-    _showMessage('Account created. Please log in with your new account.');
-    context.go('/auth/login');
+      if (response.session == null) {
+        _showMessage('Check your email to confirm your account.');
+        return;
+      }
+
+      if (!mounted) return;
+      context.go('/');
+    } catch (error) {
+      if (!mounted) return;
+      _showMessage(authErrorMessage(error));
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
   }
 
   @override
@@ -117,14 +115,12 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                 children: [
                   const SizedBox(height: 48),
 
-                  // ── Logo & app name ─────────────────────────────────────
                   const Center(
                     child: BerseriLogo(icon: Icons.wb_sunny_rounded),
                   ),
 
                   const SizedBox(height: 40),
 
-                  // ── Headline ────────────────────────────────────────────
                   RichText(
                     text: TextSpan(
                       style: BrandText.headline(context, fontSize: 28),
@@ -147,7 +143,6 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
                   const SizedBox(height: 36),
 
-                  // ── Email ───────────────────────────────────────────────
                   CustomTextfield(
                     label: 'Email address',
                     hint: 'name@example.com',
@@ -157,16 +152,14 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
                   const SizedBox(height: AppSpacing.xl),
 
-                  // ── Username ────────────────────────────────────────────
                   CustomTextfield(
-                    label: 'Username',
-                    hint: 'johndoe123',
-                    controller: _usernameController,
+                    label: 'Full name',
+                    hint: 'Jane Doe',
+                    controller: _fullNameController,
                   ),
 
                   const SizedBox(height: AppSpacing.xl),
 
-                  // ── Password ────────────────────────────────────────────
                   CustomTextfield(
                     label: 'Password',
                     hint: 'min. 8 characters',
@@ -176,7 +169,6 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
                   const SizedBox(height: AppSpacing.xl),
 
-                  // ── Confirm password ────────────────────────────────────
                   CustomTextfield(
                     label: 'Confirm password',
                     hint: 're-enter your password',
@@ -186,15 +178,14 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
                   const SizedBox(height: AppSpacing.xxl),
 
-                  // ── Create account button ───────────────────────────────
                   CustomButton(
                     text: 'Create account',
                     onPressed: _submit,
+                    isLoading: _submitting,
                   ),
 
                   const Spacer(),
 
-                  // ── Login link ──────────────────────────────────────────
                   Center(
                     child: Padding(
                       padding: const EdgeInsets.only(bottom: AppSpacing.xxxl),

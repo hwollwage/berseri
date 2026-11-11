@@ -6,12 +6,15 @@ class CustomButton extends StatelessWidget {
   final Color? backgroundColor;
   final Color? textColor;
 
+  final bool isLoading;
+
   const CustomButton({
     super.key,
     required this.text,
     required this.onPressed,
     this.backgroundColor,
     this.textColor,
+    this.isLoading = false,
   });
 
   @override
@@ -22,14 +25,23 @@ class CustomButton extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       child: FilledButton(
-        onPressed: onPressed,
+        onPressed: isLoading ? null : onPressed,
         style: hasOverride
             ? FilledButton.styleFrom(
                 backgroundColor: backgroundColor ?? scheme.primary,
                 foregroundColor: textColor ?? scheme.onPrimary,
               )
             : null,
-        child: Text(text),
+        child: isLoading
+            ? SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: textColor ?? scheme.onPrimary,
+                ),
+              )
+            : Text(text),
       ),
     );
   }

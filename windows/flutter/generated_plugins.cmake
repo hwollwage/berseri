@@ -7,6 +7,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   audioplayers_windows
   file_selector_windows
   flutter_onnxruntime
+  geolocator_windows
   rive_native
   url_launcher_windows
 )
