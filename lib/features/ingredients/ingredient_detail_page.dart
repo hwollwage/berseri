@@ -3,7 +3,9 @@ import 'package:berseri/core/components/app_radius.dart';
 import 'package:berseri/core/components/brand.dart';
 import 'package:berseri/core/components/custom_nav_bar.dart';
 import 'package:berseri/features/ingredients/ingredient.dart';
+import 'package:berseri/features/ingredients/ingredient_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 TextStyle _accentTitle(BuildContext context) =>
@@ -86,6 +88,17 @@ class IngredientDetailPage extends StatelessWidget {
                       for (final pairing in ingredient.pairsWellWith)
                         _PairingCard(pairing: pairing),
                     ],
+
+                    if (ingredient.avoidWith.isNotEmpty) ...[
+                      const SizedBox(height: 20),
+                      Text(
+                        'Avoid With',
+                        style: _accentTitle(context),
+                      ),
+                      const SizedBox(height: 12),
+                      for (final pairing in ingredient.avoidWith)
+                        _PairingCard(pairing: pairing, isAvoid: true),
+                    ],
                   ],
                 ),
               ),
@@ -125,9 +138,13 @@ class _AttributeTable extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
-    final bestFor = ingredient.bestFor ??
-        (ingredient.goodFor.isNotEmpty ? ingredient.goodFor.join(', ') : 'All skin types');
-    final helpsWith = ingredient.helpsWith ?? ingredient.category.label;
+    final bestFor = (ingredient.bestFor ??
+            (ingredient.goodFor.isNotEmpty
+                ? ingredient.goodFor.join(', ')
+                : 'All skin types'))
+        .replaceAll(' & ', ', ');
+    final helpsWith = (ingredient.helpsWith ?? ingredient.category.label)
+        .replaceAll(' & ', ', ');
     final useTime = ingredient.useTime ?? 'Morning and night';
 
     return Column(
@@ -170,6 +187,7 @@ class _AttributeRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 14),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             label,
@@ -178,11 +196,16 @@ class _AttributeRow extends StatelessWidget {
               fontWeight: FontWeight.w500,
             ),
           ),
-          Text(
-            value,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: scheme.onSurface,
-              fontWeight: FontWeight.w600,
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              softWrap: true,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: scheme.onSurface,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],
@@ -191,15 +214,24 @@ class _AttributeRow extends StatelessWidget {
   }
 }
 
-class _PairingCard extends StatelessWidget {
-  const _PairingCard({required this.pairing});
+class _PairingCard extends ConsumerWidget {
+  const _PairingCard({
+    required this.pairing,
+    this.isAvoid = false,
+  });
 
   final IngredientPairing pairing;
+  final bool isAvoid;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final ingredients =
+        ref.watch(ingredientsProvider).value ?? ingredientLibrary;
+
+    final badgeColor = isAvoid ? scheme.error : scheme.primary;
+    final onBadgeColor = isAvoid ? scheme.onError : scheme.onPrimary;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -207,7 +239,9 @@ class _PairingCard extends StatelessWidget {
         color: scheme.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(AppRadius.card),
         border: Border.all(
-          color: scheme.outlineVariant.withValues(alpha: 0.6),
+          color: isAvoid
+              ? scheme.error.withValues(alpha: 0.3)
+              : scheme.outlineVariant.withValues(alpha: 0.6),
         ),
       ),
       child: Material(
@@ -215,14 +249,17 @@ class _PairingCard extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(AppRadius.card),
           onTap: () {
-            final target = ingredientLibrary.firstWhere(
+            final target = ingredients.firstWhere(
               (item) => item.name.toLowerCase() == pairing.name.toLowerCase(),
-              orElse: () => Ingredient(
-                name: pairing.name,
-                category: IngredientCategory.brightening,
-                summary: pairing.reason,
-                goodFor: const [],
-                note: '',
+              orElse: () => ingredientLibrary.firstWhere(
+                (item) => item.name.toLowerCase() == pairing.name.toLowerCase(),
+                orElse: () => Ingredient(
+                  name: pairing.name,
+                  category: IngredientCategory.brightening,
+                  summary: pairing.reason,
+                  goodFor: const [],
+                  note: '',
+                ),
               ),
             );
 
@@ -240,14 +277,16 @@ class _PairingCard extends StatelessWidget {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: scheme.primary,
+                    color: badgeColor,
                     shape: BoxShape.circle,
                   ),
                   child: Center(
                     child: Text(
-                      pairing.name.isNotEmpty ? pairing.name[0].toUpperCase() : '?',
+                      pairing.name.isNotEmpty
+                          ? pairing.name[0].toUpperCase()
+                          : '?',
                       style: theme.textTheme.titleLarge?.copyWith(
-                        color: scheme.onPrimary,
+                        color: onBadgeColor,
                         fontWeight: FontWeight.w700,
                       ),
                     ),

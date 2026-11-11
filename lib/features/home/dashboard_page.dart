@@ -11,6 +11,7 @@ import 'package:berseri/features/clinics/nearby_clinics_card.dart';
 import 'package:berseri/features/diagnosis/analysis_result_model.dart';
 import 'package:berseri/features/ingredients/ingredient.dart';
 import 'package:berseri/features/ingredients/ingredient_detail_page.dart';
+import 'package:berseri/features/ingredients/ingredient_repository.dart';
 import 'package:berseri/features/profile/user_profile_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -247,15 +248,20 @@ class _LatestScanCard extends StatelessWidget {
   }
 }
 
-class _LibraryCard extends StatelessWidget {
+class _LibraryCard extends ConsumerWidget {
   const _LibraryCard({required this.onOpen});
 
   final VoidCallback onOpen;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final ingredientsAsync = ref.watch(ingredientsProvider);
+    final ingredients = ingredientsAsync.value;
+    final items = (ingredients != null && ingredients.isNotEmpty)
+        ? ingredients
+        : ingredientLibrary;
 
     return Material(
       color: scheme.surfaceContainerLowest,
@@ -312,11 +318,11 @@ class _LibraryCard extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.cardPadding,
                 ),
-                itemCount: ingredientLibrary.length,
+                itemCount: items.length,
                 separatorBuilder: (_, _) =>
                     const SizedBox(width: AppSpacing.sm),
                 itemBuilder: (context, index) =>
-                    _IngredientPreview(ingredient: ingredientLibrary[index]),
+                    _IngredientPreview(ingredient: items[index]),
               ),
             ),
 
