@@ -2,14 +2,17 @@ import 'package:berseri/core/components/app_back_button.dart';
 import 'package:berseri/core/components/app_radius.dart';
 import 'package:berseri/core/components/app_spacing.dart';
 import 'package:berseri/core/components/brand.dart';
+import 'package:berseri/features/analysis/analysis_history_provider.dart';
+import 'package:berseri/features/auth/auth_errors.dart';
+import 'package:berseri/features/auth/auth_repository.dart';
 import 'package:berseri/features/auth/auth_rules.dart';
 import 'package:berseri/features/profile/user_profile_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-const String _placeholderName = 'Jane Doe';
-const String _placeholderEmail = 'janedoe04@gmail.com';
+const String _pendingEmailMessage =
+    'Confirmation sent. Your email changes once you confirm it.';
 
 class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
@@ -19,12 +22,8 @@ class ProfilePage extends ConsumerWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final profile = ref.watch(userProfileProvider);
-    final name = (profile?.name.isNotEmpty ?? false)
-        ? profile!.name
-        : _placeholderName;
-    final email = (profile?.email.isNotEmpty ?? false)
-        ? profile!.email
-        : _placeholderEmail;
+    final name = profile?.name ?? '';
+    final email = profile?.email ?? '';
 
     return Scaffold(
       backgroundColor: scheme.surface,
@@ -105,9 +104,7 @@ class ProfilePage extends ConsumerWidget {
                 icon: Icons.logout,
                 title: 'Log out',
                 showTrailing: false,
-                onTap: () {
-                  // TODO: Implement Log out logic
-                },
+                onTap: () => _logout(context, ref),
               ),
               const Divider(),
             ],
@@ -115,6 +112,22 @@ class ProfilePage extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _logout(BuildContext context, WidgetRef ref) async {
+    try {
+      await ref.read(authRepositoryProvider).signOut();
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(authErrorMessage(error))));
+    }
+
+    ref.read(analysisHistoryProvider.notifier).clear();
+
+    if (!context.mounted) return;
+    context.go('/auth/login');
   }
 
   Future<void> _editEmail(
@@ -129,10 +142,18 @@ class ProfilePage extends ConsumerWidget {
 
     if (updated == null || updated == currentEmail || !context.mounted) return;
 
-    ref.read(userProfileProvider.notifier).updateEmail(updated);
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Email updated to $updated')));
+    try {
+      await ref.read(authRepositoryProvider).updateEmail(updated);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text(_pendingEmailMessage)));
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(authErrorMessage(error))));
+    }
   }
 }
 

@@ -3,21 +3,26 @@ import 'package:berseri/core/components/app_spacing.dart';
 import 'package:berseri/core/components/brand.dart';
 import 'package:berseri/core/components/custom_button.dart';
 import 'package:berseri/core/components/custom_textfield.dart';
+import 'package:berseri/features/auth/auth_errors.dart';
+import 'package:berseri/features/auth/auth_repository.dart';
+import 'package:berseri/features/auth/auth_rules.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-class ChangePasswordPage extends StatefulWidget {
+class ChangePasswordPage extends ConsumerStatefulWidget {
   const ChangePasswordPage({super.key});
 
   @override
-  State<ChangePasswordPage> createState() => _ChangePasswordPageState();
+  ConsumerState<ChangePasswordPage> createState() => _ChangePasswordPageState();
 }
 
-class _ChangePasswordPageState extends State<ChangePasswordPage> {
-  static const int _minPasswordLength = 8;
-
+class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
   final _currentController = TextEditingController();
   final _newController = TextEditingController();
   final _confirmController = TextEditingController();
+
+  bool _submitting = false;
 
   @override
   void dispose() {
@@ -35,9 +40,10 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
     if (current.isEmpty || next.isEmpty || confirm.isEmpty) {
       return 'Please fill in every field.';
     }
-    if (next.length < _minPasswordLength) {
-      return 'New password must be at least $_minPasswordLength characters.';
-    }
+
+    final passwordError = AuthRules.passwordError(next);
+    if (passwordError != null) return passwordError;
+
     if (next == current) {
       return 'New password must be different from the current one.';
     }
@@ -47,19 +53,46 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
     return null;
   }
 
-  void _submit() {
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _submit() async {
+    if (_submitting) return;
+
     final error = _validationError();
     if (error != null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error)));
+      _showMessage(error);
       return;
     }
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Password updated.')));
-    Navigator.of(context).maybePop();
+    setState(() => _submitting = true);
+
+    final repository = ref.read(authRepositoryProvider);
+
+    try {
+      try {
+        await repository.verifyPassword(_currentController.text);
+      } on AuthException catch (error) {
+        if (!mounted) return;
+        _showMessage(
+          isInvalidCredentials(error)
+              ? incorrectCurrentPasswordMessage
+              : authErrorMessage(error),
+        );
+        return;
+      }
+
+      await repository.updatePassword(_newController.text);
+      if (!mounted) return;
+      _showMessage('Password updated.');
+      Navigator.of(context).maybePop();
+    } catch (error) {
+      if (!mounted) return;
+      _showMessage(authErrorMessage(error));
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
   }
 
   @override
@@ -110,7 +143,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
 
               CustomTextfield(
                 label: 'New password',
-                hint: 'min. $_minPasswordLength characters',
+                hint: 'min. ${AuthRules.minPasswordLength} characters',
                 controller: _newController,
                 isPassword: true,
               ),
@@ -126,7 +159,11 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
 
               const SizedBox(height: AppSpacing.xxxl),
 
-              CustomButton(text: 'Save new password', onPressed: _submit),
+              CustomButton(
+                text: 'Save new password',
+                onPressed: _submit,
+                isLoading: _submitting,
+              ),
             ],
           ),
         ),

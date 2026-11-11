@@ -10,6 +10,7 @@
 #include <audioplayers_windows/audioplayers_windows_plugin.h>
 #include <file_selector_windows/file_selector_windows.h>
 #include <flutter_onnxruntime/flutter_onnxruntime_plugin.h>
+#include <geolocator_windows/geolocator_windows.h>
 #include <rive_native/rive_native_plugin.h>
 #include <url_launcher_windows/url_launcher_windows.h>
 
@@ -22,6 +23,8 @@ void RegisterPlugins(flutter::PluginRegistry* registry) {
       registry->GetRegistrarForPlugin("FileSelectorWindows"));
   FlutterOnnxruntimePluginRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("FlutterOnnxruntimePlugin"));
+  GeolocatorWindowsRegisterWithRegistrar(
+      registry->GetRegistrarForPlugin("GeolocatorWindows"));
   RiveNativePluginRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("RiveNativePlugin"));
   UrlLauncherWindowsRegisterWithRegistrar(

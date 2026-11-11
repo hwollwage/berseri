@@ -4,24 +4,25 @@ import 'package:berseri/core/components/brand.dart';
 import 'package:berseri/core/components/custom_button.dart';
 import 'package:berseri/core/components/custom_logo.dart';
 import 'package:berseri/core/components/custom_textfield.dart';
+import 'package:berseri/features/auth/auth_errors.dart';
+import 'package:berseri/features/auth/auth_repository.dart';
 import 'package:berseri/features/auth/auth_rules.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-/// Sign-in screen.
-///
-/// Colours, type and field/button decoration all come from `AppTheme` and the
-/// shared components — the page itself only decides layout and copy.
-class LoginPage extends StatefulWidget {
+class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  ConsumerState<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _LoginPageState extends ConsumerState<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+
+  bool _submitting = false;
 
   @override
   void dispose() {
@@ -30,21 +31,41 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
+    if (_submitting) return;
+
     final error =
-        AuthRules.loginIdentifierError(_emailController.text) ??
+        AuthRules.emailError(_emailController.text) ??
         (_passwordController.text.isEmpty
             ? 'Please enter your password.'
             : null);
 
     if (error != null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error)));
+      _showMessage(error);
       return;
     }
 
-    context.go('/');
+    setState(() => _submitting = true);
+
+    try {
+      await ref
+          .read(authRepositoryProvider)
+          .signIn(
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+          );
+      if (!mounted) return;
+      context.go('/');
+    } catch (error) {
+      if (!mounted) return;
+      _showMessage(authErrorMessage(error));
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -70,14 +91,12 @@ class _LoginPageState extends State<LoginPage> {
                 children: [
                   const SizedBox(height: 48),
 
-                  // ── Logo & app name ─────────────────────────────────────
                   const Center(
                     child: BerseriLogo(icon: Icons.wb_sunny_rounded),
                   ),
 
                   const SizedBox(height: 40),
 
-                  // ── Headline ────────────────────────────────────────────
                   RichText(
                     text: TextSpan(
                       style: BrandText.headline(context, fontSize: 28),
@@ -100,17 +119,15 @@ class _LoginPageState extends State<LoginPage> {
 
                   const SizedBox(height: 36),
 
-                  // ── Username / email ────────────────────────────────────
                   CustomTextfield(
-                    label: 'Username or email address',
-                    hint: 'username or name@example.com',
+                    label: 'Email address',
+                    hint: 'name@example.com',
                     keyboardType: TextInputType.emailAddress,
                     controller: _emailController,
                   ),
 
                   const SizedBox(height: AppSpacing.xl),
 
-                  // ── Password ────────────────────────────────────────────
                   CustomTextfield(
                     label: 'Password',
                     hint: 'min. 8 characters with 1 unique character',
@@ -132,12 +149,14 @@ class _LoginPageState extends State<LoginPage> {
 
                   const SizedBox(height: AppSpacing.xxl),
 
-                  // ── Login button ────────────────────────────────────────
-                  CustomButton(text: 'Login', onPressed: _submit),
+                  CustomButton(
+                    text: 'Login',
+                    onPressed: _submit,
+                    isLoading: _submitting,
+                  ),
 
                   const SizedBox(height: 24),
 
-                  // ── Or continue with ────────────────────────────────────
                   Row(
                     children: [
                       const Expanded(child: Divider()),
@@ -158,7 +177,6 @@ class _LoginPageState extends State<LoginPage> {
 
                   const SizedBox(height: AppSpacing.lg),
 
-                  // ── Provider buttons ────────────────────────────────────
                   Row(
                     children: [
                       Expanded(
@@ -183,7 +201,6 @@ class _LoginPageState extends State<LoginPage> {
 
                   const Spacer(),
 
-                  // ── Sign up link ────────────────────────────────────────
                   Center(
                     child: Padding(
                       padding: const EdgeInsets.only(bottom: AppSpacing.xxxl),

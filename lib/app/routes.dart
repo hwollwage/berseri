@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:berseri/features/analysis/history_page.dart';
 import 'package:berseri/features/auth/login_page.dart';
 import 'package:berseri/features/auth/register_page.dart';
@@ -16,12 +18,46 @@ import 'package:berseri/features/profile/profile_page.dart';
 import 'package:berseri/features/questionnaire/presentation/questionnaire_page.dart';
 import 'package:berseri/features/routine/routine_page.dart';
 import 'package:berseri/features/splash/splash_page.dart';
+import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+class _AuthStateRefresh extends ChangeNotifier {
+  _AuthStateRefresh(Stream<AuthState> changes) {
+    _subscription = changes.listen((_) => notifyListeners());
+  }
 
+  late final StreamSubscription<AuthState> _subscription;
+
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
+  }
+}
+
+final _authStateRefresh = _AuthStateRefresh(
+  Supabase.instance.client.auth.onAuthStateChange,
+);
+
+const String splashPath = '/splash';
+const String onboardingPath = '/onboarding';
+const String loginPath = '/auth/login';
+
+String? authRedirect(String path, {required bool signedIn}) {
+  if (path == splashPath) return null;
+
+  if (signedIn) {
+    return (path == onboardingPath || path == loginPath) ? '/' : null;
+  }
+
+  if (path == onboardingPath || path.startsWith('/auth/')) return null;
+  return loginPath;
+}
 
 final router = GoRouter(
   initialLocation: '/splash',
+  refreshListenable: _authStateRefresh,
   routes: [
     GoRoute(
       path: '/splash',
@@ -139,8 +175,10 @@ final router = GoRouter(
     ),
   ],
 
-  // ini buat cek status login
   redirect: (context, state) {
-    return null;
+    return authRedirect(
+      state.uri.path,
+      signedIn: Supabase.instance.client.auth.currentSession != null,
+    );
   },
 );
