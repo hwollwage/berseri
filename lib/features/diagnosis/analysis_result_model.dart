@@ -7,13 +7,17 @@ class RecommendedIngredient {
   const RecommendedIngredient(this.name, this.purpose);
 }
 
-List<Ingredient> matchedIngredientsFor(AnalysisRecord record) {
+List<Ingredient> matchedIngredientsFor(
+  AnalysisRecord record, [
+  List<Ingredient>? availableIngredients,
+]) {
+  final pool = availableIngredients ?? ingredientLibrary;
   final tags = <String>{
     record.skinTypeLabel.toLowerCase(),
     for (final condition in record.conditions) condition.toLowerCase(),
   };
 
-  return ingredientLibrary
+  return pool
       .where(
         (ingredient) => ingredient.goodFor.any(
           (target) => tags.contains(target.toLowerCase()),

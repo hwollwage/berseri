@@ -31,20 +31,54 @@ class IngredientPairing {
   final String reason;
 }
 
+/// Helper to resolve category and labels from conditions and skin types.
+class IngredientCategoryHelper {
+  static IngredientCategory determineCategory({
+    required Iterable<String> conditions,
+    required Iterable<String> skinTypes,
+  }) {
+    final conditionSet = conditions.map((c) => c.toLowerCase()).toSet();
+
+    if (conditionSet.contains('acne')) return IngredientCategory.acne;
+    if (conditionSet.contains('pigmentation') ||
+        conditionSet.contains('brightening') ||
+        conditionSet.contains('hyperpigmentation')) {
+      return IngredientCategory.brightening;
+    }
+    if (conditionSet.contains('wrinkles') || conditionSet.contains('wrinkle')) {
+      return IngredientCategory.wrinkle;
+    }
+    if (conditionSet.contains('redness')) return IngredientCategory.redness;
+
+    final skinSet = skinTypes.map((s) => s.toLowerCase()).toSet();
+    if (skinSet.contains('dry') || skinSet.contains('hydrating')) {
+      return IngredientCategory.hydrating;
+    }
+
+    return IngredientCategory.brightening;
+  }
+}
+
 /// A skincare ingredient, described in general terms for reference only.
 class Ingredient {
   const Ingredient({
+    this.id,
     required this.name,
     required this.category,
     required this.summary,
     required this.goodFor,
-    required this.note,
+    this.note = '',
     this.bestFor,
     this.helpsWith,
     this.useTime,
     this.whatItDoes,
     this.pairsWellWith = const <IngredientPairing>[],
+    this.avoidWith = const <IngredientPairing>[],
+    this.isActive = true,
   });
+
+  /// Unique identifier in database (UUID).
+  final String? id;
 
   final String name;
 
@@ -74,6 +108,108 @@ class Ingredient {
 
   /// Recommended ingredients to pair with for synergistic benefits.
   final List<IngredientPairing> pairsWellWith;
+
+  /// Ingredients to avoid combining with to prevent irritation or conflict.
+  final List<IngredientPairing> avoidWith;
+
+  /// Whether the ingredient is active in the library.
+  final bool isActive;
+
+  /// Constructs an [Ingredient] from Supabase database tables:
+  /// [row] from `public.ingredients`,
+  /// [suitabilities] from `public.ingredient_suitability`,
+  /// [pairings] from `public.ingredient_pairings`,
+  /// and [idToIngredientLookup] mapping UUID -> ingredient row.
+  factory Ingredient.fromDatabase({
+    required Map<String, dynamic> row,
+    List<Map<String, dynamic>> suitabilities = const [],
+    List<Map<String, dynamic>> pairings = const [],
+    Map<String, Map<String, dynamic>> idToIngredientLookup = const {},
+  }) {
+    final id = row['id']?.toString();
+    final name = (row['name'] as String?)?.trim() ?? '';
+    final summary = (row['summary'] as String?)?.trim() ?? '';
+    final useTime = (row['use_time'] as String?)?.trim();
+    final whatItDoes = (row['what_it_does'] as String?)?.trim();
+    final isActive = row['is_active'] as bool? ?? true;
+
+    final skinTypes = <String>[];
+    final conditions = <String>[];
+
+    for (final s in suitabilities) {
+      final kind = s['kind']?.toString().toLowerCase().trim();
+      final val = s['value']?.toString().toLowerCase().trim();
+      if (val == null || val.isEmpty) continue;
+
+      if (kind == 'skin_type') {
+        skinTypes.add(_formatSkinType(val));
+      } else if (kind == 'condition') {
+        conditions.add(_formatCondition(val));
+      }
+    }
+
+    final goodFor = <String>[
+      ...skinTypes,
+      ...conditions,
+    ];
+
+    final category = IngredientCategoryHelper.determineCategory(
+      conditions: conditions,
+      skinTypes: skinTypes,
+    );
+
+    final pairsWellWith = <IngredientPairing>[];
+    final avoidWith = <IngredientPairing>[];
+
+    for (final p in pairings) {
+      final kind = p['kind']?.toString().toLowerCase().trim();
+      final pairedId = p['paired_ingredient_id']?.toString();
+      final paired = idToIngredientLookup[pairedId];
+      if (paired == null) continue;
+
+      final pairedName = (paired['name'] as String?)?.trim() ?? '';
+      final pairedSummary = (paired['summary'] as String?)?.trim() ?? '';
+      if (pairedName.isEmpty) continue;
+
+      final pairing = IngredientPairing(
+        name: pairedName,
+        reason: pairedSummary,
+      );
+
+      if (kind == 'avoid_with') {
+        avoidWith.add(pairing);
+      } else {
+        pairsWellWith.add(pairing);
+      }
+    }
+
+    String? bestFor;
+    if (skinTypes.length >= 4) {
+      bestFor = 'All skin types';
+    } else if (skinTypes.isNotEmpty) {
+      bestFor = '${skinTypes.join(", ")} skin';
+    }
+
+    String? helpsWith;
+    if (conditions.isNotEmpty) {
+      helpsWith = conditions.join(', ');
+    }
+
+    return Ingredient(
+      id: id,
+      name: name,
+      category: category,
+      summary: summary,
+      goodFor: goodFor,
+      bestFor: bestFor,
+      helpsWith: helpsWith,
+      useTime: useTime,
+      whatItDoes: whatItDoes,
+      pairsWellWith: pairsWellWith,
+      avoidWith: avoidWith,
+      isActive: isActive,
+    );
+  }
 }
 
 /// General skincare reference, not medical advice.
@@ -266,12 +402,14 @@ const List<Ingredient> ingredientLibrary = <Ingredient>[
 /// category) and by a free-text [query] against the name, category and the
 /// concerns it targets. Results keep the library order.
 List<Ingredient> filterIngredients({
+  List<Ingredient>? ingredients,
   IngredientCategory? category,
   String query = '',
 }) {
+  final pool = ingredients ?? ingredientLibrary;
   final needle = query.trim().toLowerCase();
 
-  return ingredientLibrary.where((ingredient) {
+  return pool.where((ingredient) {
     if (category != null && !targetsConcern(ingredient, category)) {
       return false;
     }
@@ -289,9 +427,63 @@ bool targetsConcern(Ingredient ingredient, IngredientCategory category) {
   if (ingredient.category == category) return true;
 
   return ingredient.goodFor.any(
-    (tag) => _singular(tag) == _singular(category.label),
+    (tag) => _matchesCategory(tag, category),
   );
+}
+
+bool _matchesCategory(String tag, IngredientCategory category) {
+  final cleanTag = _singular(tag);
+  final cleanCategory = _singular(category.label);
+  if (cleanTag == cleanCategory) return true;
+
+  switch (category) {
+    case IngredientCategory.brightening:
+      return cleanTag == 'pigmentation' || cleanTag == 'hyperpigmentation';
+    case IngredientCategory.hydrating:
+      return cleanTag == 'dry' || cleanTag == 'hydration';
+    case IngredientCategory.wrinkle:
+      return cleanTag == 'wrinkle';
+    case IngredientCategory.acne:
+      return cleanTag == 'acne';
+    case IngredientCategory.redness:
+      return cleanTag == 'redness';
+  }
 }
 
 String _singular(String value) =>
     value.trim().toLowerCase().replaceAll(RegExp(r's$'), '');
+
+String _formatSkinType(String value) {
+  switch (value.toLowerCase()) {
+    case 'normal':
+      return 'Normal';
+    case 'dry':
+      return 'Dry';
+    case 'oily':
+      return 'Oily';
+    case 'combination':
+      return 'Combination';
+    default:
+      return value.isNotEmpty
+          ? '${value[0].toUpperCase()}${value.substring(1)}'
+          : value;
+  }
+}
+
+String _formatCondition(String value) {
+  switch (value.toLowerCase()) {
+    case 'acne':
+      return 'Acne';
+    case 'pigmentation':
+      return 'Pigmentation';
+    case 'redness':
+      return 'Redness';
+    case 'wrinkles':
+    case 'wrinkle':
+      return 'Wrinkles';
+    default:
+      return value.isNotEmpty
+          ? '${value[0].toUpperCase()}${value.substring(1)}'
+          : value;
+  }
+}

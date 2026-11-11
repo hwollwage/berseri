@@ -2,16 +2,18 @@ import 'package:berseri/core/components/app_header.dart';
 import 'package:berseri/core/components/app_radius.dart';
 import 'package:berseri/features/ingredients/ingredient.dart';
 import 'package:berseri/features/ingredients/ingredient_detail_page.dart';
+import 'package:berseri/features/ingredients/ingredient_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class IngredientsPage extends StatefulWidget {
+class IngredientsPage extends ConsumerStatefulWidget {
   const IngredientsPage({super.key});
 
   @override
-  State<IngredientsPage> createState() => _IngredientsPageState();
+  ConsumerState<IngredientsPage> createState() => _IngredientsPageState();
 }
 
-class _IngredientsPageState extends State<IngredientsPage> {
+class _IngredientsPageState extends ConsumerState<IngredientsPage> {
   final TextEditingController _searchController = TextEditingController();
 
   IngredientCategory? _category;
@@ -32,8 +34,7 @@ class _IngredientsPageState extends State<IngredientsPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-
-    final results = filterIngredients(category: _category, query: _query);
+    final ingredientsAsync = ref.watch(ingredientsProvider);
 
     return Scaffold(
       backgroundColor: scheme.surface,
@@ -101,9 +102,35 @@ class _IngredientsPageState extends State<IngredientsPage> {
             ),
 
             Expanded(
-              child: results.isEmpty
-                  ? _EmptyResults(query: _query)
-                  : GridView.builder(
+              child: ingredientsAsync.when(
+                loading: () => const Center(
+                  child: CircularProgressIndicator(),
+                ),
+                error: (error, _) => _ErrorState(
+                  message: 'Failed to load ingredients',
+                  onRetry: () => ref.invalidate(ingredientsProvider),
+                ),
+                data: (ingredients) {
+                  final source = ingredients.isNotEmpty
+                      ? ingredients
+                      : ingredientLibrary;
+                  final results = filterIngredients(
+                    ingredients: source,
+                    category: _category,
+                    query: _query,
+                  );
+
+                  if (results.isEmpty) {
+                    return _EmptyResults(query: _query);
+                  }
+
+                  return RefreshIndicator(
+                    onRefresh: () async {
+                      ref.invalidate(ingredientsProvider);
+                      await ref.read(ingredientsProvider.future);
+                    },
+                    child: GridView.builder(
+                      physics: const AlwaysScrollableScrollPhysics(),
                       padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                       gridDelegate:
                           SliverGridDelegateWithFixedCrossAxisCount(
@@ -118,6 +145,9 @@ class _IngredientsPageState extends State<IngredientsPage> {
                         onTap: () => _openDetail(context, results[index]),
                       ),
                     ),
+                  );
+                },
+              ),
             ),
           ],
         ),
@@ -185,11 +215,9 @@ class _IngredientCard extends StatelessWidget {
 
   static const int _nameLines = 2;
 
-  static const EdgeInsets _padding = EdgeInsets.fromLTRB(14, 18, 14, 14);
+  static const EdgeInsets _padding = EdgeInsets.fromLTRB(14, 12, 12, 14);
 
-  static const double _labelGap = 5;
-
-  static const double _badgeTop = 12;
+  static const double _labelGap = 8;
   static const double _badgeSize = 32;
 
   static TextStyle labelStyle(BuildContext context) {
@@ -230,7 +258,7 @@ class _IngredientCard extends StatelessWidget {
 
   static double gridExtent(BuildContext context) =>
       _padding.vertical +
-      _lineHeight(context, labelStyle(context)) +
+      _badgeSize +
       _labelGap +
       _nameBlockHeight(context);
 
@@ -251,34 +279,16 @@ class _IngredientCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        child: Stack(
-          children: [
-            Positioned(
-              top: _badgeTop,
-              right: 12,
-              child: Container(
-                height: _badgeSize,
-                width: _badgeSize,
-                decoration: BoxDecoration(
-                  color: scheme.primary,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  ingredient.category.icon,
-                  size: 16,
-                  color: scheme.onPrimary,
-                ),
-              ),
-            ),
-
-            Padding(
-              padding: _padding,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
+        child: Padding(
+          padding: _padding,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.only(right: _badgeSize + 4),
+                  Expanded(
                     child: Text(
                       ingredient.category.label,
                       maxLines: 1,
@@ -286,17 +296,31 @@ class _IngredientCard extends StatelessWidget {
                       style: labelStyle(context),
                     ),
                   ),
-                  const SizedBox(height: _labelGap),
-                  Text(
-                    ingredient.name,
-                    maxLines: _nameLines,
-                    overflow: TextOverflow.ellipsis,
-                    style: nameStyle(context),
+                  const SizedBox(width: 8),
+                  Container(
+                    height: _badgeSize,
+                    width: _badgeSize,
+                    decoration: BoxDecoration(
+                      color: scheme.primary,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      ingredient.category.icon,
+                      size: 16,
+                      color: scheme.onPrimary,
+                    ),
                   ),
                 ],
               ),
-            ),
-          ],
+              const SizedBox(height: _labelGap),
+              Text(
+                ingredient.name,
+                maxLines: _nameLines,
+                overflow: TextOverflow.ellipsis,
+                style: nameStyle(context),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -329,6 +353,44 @@ class _EmptyResults extends StatelessWidget {
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: scheme.onSurfaceVariant,
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ErrorState extends StatelessWidget {
+  const _ErrorState({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.cloud_off_outlined, size: 40, color: scheme.error),
+            const SizedBox(height: 12),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 16),
+            FilledButton.tonal(
+              onPressed: onRetry,
+              child: const Text('Retry'),
             ),
           ],
         ),
