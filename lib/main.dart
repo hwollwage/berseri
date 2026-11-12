@@ -1,9 +1,17 @@
 import 'package:berseri/app/app.dart';
+import 'package:berseri/features/clinics/nearby_clinics_provider.dart'
+    show LocationException;
 import 'package:berseri/features/notifications/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+Duration? appRetry(int retryCount, Object error) {
+  if (error is LocationException) return null;
+
+  return ProviderContainer.defaultRetry(retryCount, error, maxRetries: 2);
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,10 +27,10 @@ Future<void> main() async {
   await NotificationService.instance.requestPermission();
   await NotificationService.instance.ensureReminderScheduled();
 
-
   runApp(
-    const ProviderScope(
-      child: BerseriApp(),
+    ProviderScope(
+      retry: appRetry,
+      child: const BerseriApp(),
     ),
   );
 }

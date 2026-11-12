@@ -12,7 +12,14 @@ class ClinicRepository {
 
   final http.Client _client;
 
-  static const _endpoint = 'https://overpass-api.de/api/interpreter';
+  static const List<String> _endpoints = <String>[
+    'https://overpass-api.de/api/interpreter',
+    'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+    'https://overpass.kumi.systems/api/interpreter',
+    'https://overpass.private.coffee/api/interpreter',
+  ];
+
+  static const Duration _requestTimeout = Duration(seconds: 60);
 
   Future<List<Clinic>> fetchNearby({
     required double lat,
@@ -21,31 +28,16 @@ class ClinicRepository {
     int limit = 10,
   }) async {
     final radius = (radiusKm * 1000).round();
-
-    // Hanya klinik (bukan rumah sakit / apotek).
     final query = '''
-[out:json][timeout:25];
+[out:json][timeout:50];
 (
   nwr["amenity"="clinic"](around:$radius,$lat,$lng);
   nwr["healthcare"="clinic"](around:$radius,$lat,$lng);
 );
-out center tags;
+out center tags 100;
 ''';
 
-    final res = await _client
-        .post(
-          Uri.parse(_endpoint),
-          headers: {'User-Agent': 'berseri-app/1.0'},
-          body: {'data': query},
-        )
-        .timeout(const Duration(seconds: 30));
-
-    if (res.statusCode != 200) {
-      throw Exception('Gagal memuat klinik (${res.statusCode})');
-    }
-
-    final body =
-        jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+    final body = await _post(query);
     final elements = (body['elements'] as List).cast<Map<String, dynamic>>();
 
     final seen = <String>{};
@@ -83,6 +75,37 @@ out center tags;
 
     clinics.sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
     return clinics.take(limit).toList();
+  }
+
+  Future<Map<String, dynamic>> _post(String query) async {
+    final deadline = DateTime.now().add(_requestTimeout);
+    Exception? lastError;
+
+    for (final endpoint in _endpoints) {
+      final remaining = deadline.difference(DateTime.now());
+      if (remaining <= Duration.zero) break;
+
+      try {
+        final res = await _client
+            .post(
+              Uri.parse(endpoint),
+              headers: const {'User-Agent': 'berseri-app/1.0'},
+              body: {'data': query},
+            )
+            .timeout(remaining);
+
+        if (res.statusCode != 200) {
+          lastError = Exception('Gagal memuat klinik (${res.statusCode})');
+          continue;
+        }
+
+        return jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+      } on Exception catch (error) {
+        lastError = error;
+      }
+    }
+
+    throw lastError ?? Exception('Gagal memuat klinik');
   }
 
   String _address(Map<String, dynamic> t) {

@@ -10,7 +10,6 @@ import 'package:url_launcher/url_launcher.dart';
 import 'clinic.dart';
 import 'nearby_clinics_provider.dart';
 
-// ── Helper: buka Google Maps directions ke koordinat klinik ───────────────────
 Future<void> _openDirections(Clinic clinic) async {
   final uri = Uri.parse(
     'https://www.google.com/maps/dir/?api=1'
@@ -22,7 +21,6 @@ Future<void> _openDirections(Clinic clinic) async {
   }
 }
 
-// ── Helper: buka aplikasi telepon ─────────────────────────────────────────────
 Future<void> _callPhone(String phone) async {
   final uri = Uri(scheme: 'tel', path: phone);
   if (!await launchUrl(uri)) {
@@ -325,7 +323,7 @@ class _ClinicsSkeleton extends StatelessWidget {
 }
 
 Widget _errorView(Object error, WidgetRef ref) {
-  void retry() => ref.invalidate(userPositionProvider);
+  void retry() => retryNearbyClinics(ref, error);
 
   if (error is LocationException) {
     switch (error.issue) {
@@ -349,6 +347,12 @@ Widget _errorView(Object error, WidgetRef ref) {
             ('Open settings', Geolocator.openAppSettings),
             ('Try again', retry),
           ],
+        );
+      case LocationIssue.timeout:
+        return _Message(
+          text: "We couldn't get your location. Move somewhere with a clearer "
+              'view of the sky and try again.',
+          actions: [('Try again', retry)],
         );
     }
   }
