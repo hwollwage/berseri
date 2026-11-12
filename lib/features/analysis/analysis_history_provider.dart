@@ -1,5 +1,6 @@
 import 'package:berseri/features/analysis/analysis_record.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:berseri/features/notifications/notification_service.dart';
 
 /// Placeholder records so the dashboard's last-analysis card and the history
 /// screen can be reviewed before a real scan exists. Delete this list and the
@@ -35,8 +36,11 @@ class AnalysisHistoryNotifier extends Notifier<List<AnalysisRecord>> {
   @override
   List<AnalysisRecord> build() => List<AnalysisRecord>.of(_placeholderHistory);
 
-  void add(AnalysisRecord record) =>
-      state = <AnalysisRecord>[record, ...state];
+  void add(AnalysisRecord record) {
+    state = <AnalysisRecord>[record, ...state];
+    // Sudah scan: lewati pengingat hari ini, mulai lagi besok.
+    NotificationService.instance.onScanCompleted();
+  }
 
   void clear() => state = const <AnalysisRecord>[];
 }
@@ -46,7 +50,7 @@ final analysisHistoryProvider =
       AnalysisHistoryNotifier.new,
     );
 
-/// Most recent analysis, or `null` when nothing has been saved yet.
+/// Most recent analysis, or null when nothing has been saved yet.
 final latestAnalysisProvider = Provider<AnalysisRecord?>((ref) {
   final history = ref.watch(analysisHistoryProvider);
   return history.isEmpty ? null : history.first;
