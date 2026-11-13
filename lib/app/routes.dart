@@ -1,12 +1,12 @@
 import 'dart:async';
 
+import 'package:berseri/features/analysis/analysis_entry.dart';
 import 'package:berseri/features/analysis/history_page.dart';
 import 'package:berseri/features/auth/login_page.dart';
 import 'package:berseri/features/auth/register_page.dart';
 import 'package:berseri/features/camera/presentation/pages/camera_page.dart';
 import 'package:berseri/features/clinics/clinics_page.dart';
 import 'package:berseri/features/diagnosis/analysis_loading_page.dart';
-import 'package:berseri/features/diagnosis/analysis_result_model.dart';
 import 'package:berseri/features/diagnosis/analysis_result_page.dart';
 import 'package:berseri/features/diagnosis/diagnosis_page.dart';
 import 'package:berseri/features/home/home_page.dart';
@@ -152,15 +152,14 @@ final router = GoRouter(
     GoRoute(
       path: '/analysis-loading',
       name: 'analysis-loading',
-      builder: (context, state) =>
-          AnalysisLoadingPage(imagePath: state.extra as String?),
+      builder: (context, state) => const AnalysisLoadingPage(),
     ),
 
     GoRoute(
       path: '/analysis-result',
       name: 'analysis-result',
       builder: (context, state) => AnalysisResultPage(
-        result: (state.extra as AnalysisResult?) ?? AnalysisResult.demo(),
+        entry: state.extra as AnalysisEntry?,
       ),
     ),
 

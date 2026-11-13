@@ -5,12 +5,6 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
-/// Notifikasi lokal: pengingat "jangan lupa scan wajah".
-///
-/// Ada dua pengingat:
-/// 1. Harian jam 19.00. Kalau pengguna sudah scan hari ini, mulai besok.
-/// 2. Tidak aktif: sekali jalan, muncul kalau tidak scan selama 3 hari.
-///    Dijadwal ulang setiap scan selesai.
 class NotificationService {
   NotificationService._();
 
@@ -28,6 +22,8 @@ class NotificationService {
 
   bool _ready = false;
 
+  static bool get _supported => !kIsWeb;
+
   static const NotificationDetails _details = NotificationDetails(
     android: AndroidNotificationDetails(
       _channelId,
@@ -40,7 +36,7 @@ class NotificationService {
 
   /// Panggil sekali saat aplikasi mulai (di main).
   Future<void> init() async {
-    if (_ready) return;
+    if (!_supported || _ready) return;
 
     tz_data.initializeTimeZones();
     final localZone = await FlutterTimezone.getLocalTimezone();
@@ -58,6 +54,8 @@ class NotificationService {
 
   /// Android 13+ wajib meminta izin notifikasi.
   Future<bool> requestPermission() async {
+    if (!_supported) return false;
+
     final android = _plugin.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
     return await android?.requestNotificationsPermission() ?? false;
@@ -71,8 +69,10 @@ class NotificationService {
   }
 
   /// Notifikasi langsung, hanya untuk mengetes izin dan tampilan.
-  Future<void> showTest() {
-    return _plugin.show(
+  Future<void> showTest() async {
+    if (!_supported) return;
+
+    await _plugin.show(
       id: _testId,
       title: 'Jangan lupa scan wajah',
       body: 'Yuk cek kondisi kulitmu hari ini.',
@@ -88,6 +88,8 @@ class NotificationService {
     int hour = 19,
     int minute = 0,
   }) async {
+    if (!_supported) return;
+
     await _plugin.cancel(id: _reminderId);
 
     final now = tz.TZDateTime.now(tz.local);
@@ -122,6 +124,8 @@ class NotificationService {
     int hour = 19,
     int minute = 0,
   }) async {
+    if (!_supported) return;
+
     await _plugin.cancel(id: _inactivityId);
 
     final now = tz.TZDateTime.now(tz.local);
@@ -148,6 +152,8 @@ class NotificationService {
   /// Panggil saat app dibuka. Jadwal disimpan oleh sistem Android,
   /// jadi cukup cek apakah sudah ada. Kalau belum, jadwalkan.
   Future<void> ensureReminderScheduled() async {
+    if (!_supported) return;
+
     // Hapus pengingat harian lama yang mungkin masih terpasang di HP.
     await _plugin.cancel(id: _reminderId);
 
@@ -160,6 +166,8 @@ class NotificationService {
   /// Panggil setiap kali scan selesai: pengingat harian mulai besok,
   /// dan hitungan 3 hari tidak aktif dimulai ulang.
   Future<void> onScanCompleted() async {
+    if (!_supported) return;
+
     try {
       await scheduleInactivityReminder();
       debugPrint('Pengingat 3 hari dijadwalkan ulang');
@@ -169,6 +177,8 @@ class NotificationService {
   }
 
   Future<void> cancelReminder() async {
+    if (!_supported) return;
+
     await _plugin.cancel(id: _reminderId);
     await _plugin.cancel(id: _inactivityId);
   }

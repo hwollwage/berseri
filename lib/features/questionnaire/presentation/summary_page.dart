@@ -3,19 +3,44 @@ import 'package:berseri/core/components/app_radius.dart';
 import 'package:berseri/core/components/app_spacing.dart';
 import 'package:berseri/core/components/brand.dart';
 import 'package:berseri/core/components/custom_button.dart';
+import 'package:berseri/features/analysis/analysis_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../data/questionnaire_data.dart';
 import '../models/question_model.dart';
 
-class SummaryPage extends StatelessWidget {
+class SummaryPage extends ConsumerWidget {
   const SummaryPage({super.key, required this.answers});
 
   final List<int?> answers;
 
+  void _continue(BuildContext context, WidgetRef ref) {
+    final draft = ref.read(analysisDraftProvider);
+    if (draft == null) {
+      context.go('/analysis-loading');
+      return;
+    }
+
+    final answersByKey = answersByQuestion(answers);
+    final estimate = resolveSkinType(answersByKey);
+
+    ref
+        .read(analysisDraftProvider.notifier)
+        .update(
+          draft.withAnswers(
+            answers: answersByKey,
+            skinType: estimate.skinType,
+            skinTypeConfidence: estimate.confidence,
+          ),
+        );
+
+    context.go('/analysis-loading');
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -54,7 +79,7 @@ class SummaryPage extends StatelessWidget {
             ),
             _Actions(
               onRetake: () => Navigator.pop(context, true),
-              onContinue: () => context.go('/analysis-loading'),
+              onContinue: () => _continue(context, ref),
             ),
           ],
         ),

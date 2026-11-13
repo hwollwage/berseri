@@ -1,10 +1,6 @@
-import 'dart:io';
-
 import 'package:berseri/core/components/app_radius.dart';
-import 'package:berseri/features/analysis/analysis_history_provider.dart';
-import 'package:berseri/features/analysis/analysis_record.dart';
-import 'package:berseri/features/diagnosis/analysis_result_model.dart';
-import 'package:flutter/foundation.dart';
+import 'package:berseri/features/analysis/analysis_entry.dart';
+import 'package:berseri/features/analysis/analysis_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -16,8 +12,7 @@ class HistoryPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final history = ref.watch(analysisHistoryProvider);
-    final groups = groupByMonth(history);
+    final history = ref.watch(analysisHistoryEntriesProvider);
 
     return Scaffold(
       backgroundColor: scheme.surface,
@@ -41,29 +36,18 @@ class HistoryPage extends ConsumerWidget {
               ),
             ),
             Expanded(
-              child: groups.isEmpty
-                  ? const _EmptyState()
-                  : ListView(
-                      padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
-                      children: [
-                        for (final group in groups) ...[
-                          _MonthHeading(label: group.label),
-                          const SizedBox(height: 12),
-                          for (final record in group.records) ...[
-                            _HistoryCard(
-                              record: record,
-                              onTap: () => context.push(
-                                '/analysis-result',
-                                extra: AnalysisResult.fromRecord(record),
-                              ),
-                            ),
-                            if (record != group.records.last)
-                              const SizedBox(height: 10),
-                          ],
-                          if (group != groups.last) const SizedBox(height: 24),
-                        ],
-                      ],
-                    ),
+              child: history.when(
+                loading: () => const Center(
+                  child: CircularProgressIndicator(),
+                ),
+                error: (_, _) => _ErrorState(
+                  onRetry: () =>
+                      ref.invalidate(analysisHistoryEntriesProvider),
+                ),
+                data: (entries) => entries.isEmpty
+                    ? const _EmptyState()
+                    : _HistoryList(entries: entries),
+              ),
             ),
           ],
         ),
@@ -72,26 +56,61 @@ class HistoryPage extends ConsumerWidget {
   }
 }
 
-class HistoryGroup {
-  const HistoryGroup({required this.label, required this.records});
+class _HistoryList extends StatelessWidget {
+  const _HistoryList({required this.entries});
 
-  final String label;
-  final List<AnalysisRecord> records;
+  final List<AnalysisEntry> entries;
+
+  @override
+  Widget build(BuildContext context) {
+    final groups = groupByMonth(entries);
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+      children: [
+        for (final group in groups) ...[
+          _MonthHeading(label: group.label),
+          const SizedBox(height: 12),
+          for (final entry in group.entries) ...[
+            _HistoryCard(
+              entry: entry,
+              onTap: () => context.push(
+                '/analysis-result',
+                extra: entry,
+              ),
+            ),
+            if (entry != group.entries.last) const SizedBox(height: 10),
+          ],
+          if (group != groups.last) const SizedBox(height: 24),
+        ],
+      ],
+    );
+  }
 }
 
-List<HistoryGroup> groupByMonth(List<AnalysisRecord> records) {
+class HistoryGroup {
+  const HistoryGroup({required this.label, required this.entries});
+
+  final String label;
+  final List<AnalysisEntry> entries;
+}
+
+List<HistoryGroup> groupByMonth(List<AnalysisEntry> entries) {
   final groups = <HistoryGroup>[];
 
-  for (final record in records) {
+  for (final entry in entries) {
     final isSameMonth =
         groups.isNotEmpty &&
-        groups.last.records.first.monthKey == record.monthKey;
+        groups.last.entries.first.record.monthKey == entry.record.monthKey;
 
     if (isSameMonth) {
-      groups.last.records.add(record);
+      groups.last.entries.add(entry);
     } else {
       groups.add(
-        HistoryGroup(label: record.monthLabel, records: <AnalysisRecord>[record]),
+        HistoryGroup(
+          label: entry.record.monthLabel,
+          entries: <AnalysisEntry>[entry],
+        ),
       );
     }
   }
@@ -149,7 +168,7 @@ class _MonthHeading extends StatelessWidget {
 }
 
 class _HistoryCard extends StatelessWidget {
-  const _HistoryCard({required this.record, required this.onTap});
+  const _HistoryCard({required this.entry, required this.onTap});
 
   static const double _photoSize = 78;
   static const double _badgeSize = 34;
@@ -157,13 +176,14 @@ class _HistoryCard extends StatelessWidget {
 
   static const double _dateGap = 26;
 
-  final AnalysisRecord record;
+  final AnalysisEntry entry;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final record = entry.record;
 
     return Material(
       color: scheme.surfaceContainerLowest,
@@ -179,7 +199,7 @@ class _HistoryCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              _Thumbnail(record: record, size: _photoSize),
+              _Thumbnail(photoUrl: entry.photoUrl, size: _photoSize),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
@@ -242,27 +262,28 @@ class _HistoryCard extends StatelessWidget {
 }
 
 class _Thumbnail extends StatelessWidget {
-  const _Thumbnail({required this.record, required this.size});
+  const _Thumbnail({required this.photoUrl, required this.size});
 
-  final AnalysisRecord record;
+  final String? photoUrl;
   final double size;
 
   @override
   Widget build(BuildContext context) {
-    final path = record.photoPath;
-    final canReadFile = !kIsWeb && path != null && path.isNotEmpty;
+    final url = photoUrl;
 
     return ClipOval(
       child: SizedBox(
         width: size,
         height: size,
-        child: canReadFile
-            ? Image.file(
-                File(path),
+        child: url == null
+            ? _Fallback(size: size)
+            : Image.network(
+                url,
                 fit: BoxFit.cover,
+                loadingBuilder: (context, child, progress) =>
+                    progress == null ? child : _Fallback(size: size),
                 errorBuilder: (context, _, _) => _Fallback(size: size),
-              )
-            : _Fallback(size: size),
+              ),
       ),
     );
   }
@@ -283,6 +304,43 @@ class _Fallback extends StatelessWidget {
         Icons.face_retouching_natural,
         size: size * 0.5,
         color: scheme.onSurfaceVariant,
+      ),
+    );
+  }
+}
+
+class _ErrorState extends StatelessWidget {
+  const _ErrorState({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.cloud_off_outlined, size: 40, color: scheme.error),
+            const SizedBox(height: 12),
+            Text(
+              "We couldn't load your analysis history.",
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 16),
+            FilledButton.tonal(
+              onPressed: onRetry,
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
       ),
     );
   }

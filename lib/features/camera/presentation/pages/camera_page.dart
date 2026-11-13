@@ -3,8 +3,9 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter/foundation.dart';
 
+import 'package:berseri/features/analysis/analysis_draft.dart';
+import 'package:berseri/features/analysis/analysis_repository.dart';
 import 'package:berseri/features/camera/presentation/providers/camera_providers.dart';
 import 'package:berseri/features/camera/presentation/widgets/analysis_loading_overlay.dart';
 import 'package:berseri/features/camera/presentation/widgets/captured_photo.dart';
@@ -12,6 +13,7 @@ import 'package:berseri/features/camera/presentation/widgets/face_guide_overlay.
 import 'package:berseri/features/camera/presentation/widgets/glass_widgets.dart';
 import 'package:berseri/features/camera/presentation/widgets/shutter_button.dart';
 import 'package:berseri/features/classification/classification_provider.dart';
+import 'package:berseri/features/classification/skin_classification.dart';
 
 class CameraPage extends ConsumerStatefulWidget {
   const CameraPage({super.key});
@@ -52,12 +54,25 @@ class _CameraPageState extends ConsumerState<CameraPage>
     setState(() => _saving = true);
 
     try {
+      SkinClassification? classification;
       try {
-        await ref.read(classificationProvider.future);
+        classification = await ref.read(classificationProvider.future);
       } catch (_) {
-        // TODO: belum ada tujuan ke server flasknya
-        if (!kDebugMode) rethrow;
+        classification = null;
       }
+
+      final photo = ref.read(cameraProvider).asData?.value.imageFile;
+
+      ref
+          .read(analysisDraftProvider.notifier)
+          .start(
+            AnalysisDraft(
+              photo: photo,
+              conditionScores:
+                  classification?.conditionScores ?? const <String, double>{},
+            ),
+          );
+
       await ref.read(cameraProvider.notifier).confirmPicture();
 
       await Future<void>.delayed(const Duration(milliseconds: 400));

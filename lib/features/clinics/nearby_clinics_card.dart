@@ -2,8 +2,8 @@ import 'package:berseri/core/components/app_radius.dart';
 import 'package:berseri/core/components/app_spacing.dart';
 import 'package:berseri/core/components/brand.dart';
 import 'package:berseri/core/components/text_link.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -331,7 +331,7 @@ Widget _errorView(Object error, WidgetRef ref) {
         return _Message(
           text: 'Turn on location services to see clinics near you.',
           actions: [
-            ('Open settings', Geolocator.openLocationSettings),
+            ('Open settings', openLocationSettingsSafely),
             ('Try again', retry),
           ],
         );
@@ -342,9 +342,12 @@ Widget _errorView(Object error, WidgetRef ref) {
         );
       case LocationIssue.deniedForever:
         return _Message(
-          text: 'Location permission is blocked. Enable it in settings.',
+          text: kIsWeb
+              ? 'Location is blocked for this site. Allow it in your browser '
+                    'and try again.'
+              : 'Location permission is blocked. Enable it in settings.',
           actions: [
-            ('Open settings', Geolocator.openAppSettings),
+            if (!kIsWeb) ('Open settings', openAppSettingsSafely),
             ('Try again', retry),
           ],
         );
@@ -357,6 +360,7 @@ Widget _errorView(Object error, WidgetRef ref) {
     }
   }
 
+  debugPrint('Nearby clinics failed: $error');
   return _Message(
     text: "We couldn't load nearby clinics.",
     actions: [('Try again', retry)],

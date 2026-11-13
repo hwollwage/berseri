@@ -5,11 +5,10 @@ import 'package:camera/camera.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
-import 'package:berseri/features/analysis/analysis_history_provider.dart';
-import 'package:berseri/features/analysis/analysis_record.dart';
 import 'package:berseri/features/camera/data/audio_capture_feedback.dart';
 import 'package:berseri/features/camera/domain/capture_feedback.dart';
 import 'package:berseri/features/classification/classification_provider.dart';
+import 'package:berseri/features/notifications/notification_service.dart';
 
 final captureFeedbackProvider = Provider<CaptureFeedback>((ref) {
   final feedback = AudioCaptureFeedback();
@@ -160,14 +159,7 @@ class CameraNotifier extends AsyncNotifier<CameraState> {
     final image = current?.imageFile;
     if (current == null || image == null) return;
 
-    final result = ref.read(classificationProvider).asData?.value;
-    if (result != null) {
-      ref
-          .read(analysisHistoryProvider.notifier)
-          .add(
-            AnalysisRecord.fromClassification(result, photoPath: image.path),
-          );
-    }
+    NotificationService.instance.onScanCompleted();
 
     ref.read(classificationProvider.notifier).reset();
     state = AsyncData(current.copyWith(clearImage: true));

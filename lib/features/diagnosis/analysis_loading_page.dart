@@ -4,68 +4,104 @@ import 'dart:math' as math;
 import 'package:berseri/core/components/app_radius.dart';
 import 'package:berseri/core/components/app_spacing.dart';
 import 'package:berseri/core/components/brand.dart';
-import 'package:berseri/features/diagnosis/analysis_result_model.dart';
+import 'package:berseri/core/components/custom_button.dart';
+import 'package:berseri/features/analysis/analysis_repository.dart';
 import 'package:berseri/features/diagnosis/widgets/skin_photo.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-class AnalysisLoadingPage extends StatefulWidget {
-  final String? imagePath;
-  const AnalysisLoadingPage({super.key, this.imagePath});
+class AnalysisLoadingPage extends ConsumerStatefulWidget {
+  const AnalysisLoadingPage({super.key});
 
   @override
-  State<AnalysisLoadingPage> createState() => _AnalysisLoadingPageState();
+  ConsumerState<AnalysisLoadingPage> createState() => _AnalysisLoadingPageState();
 }
 
-class _AnalysisLoadingPageState extends State<AnalysisLoadingPage> {
-  static const _steps = [
-    'Analyzing your skin',
-    'Analyzing skin type',
-    'Detecting visible conditions',
+class _AnalysisLoadingPageState extends ConsumerState<AnalysisLoadingPage> {
+  static const List<String> _steps = [
+    'Uploading your photo',
+    'Saving your analysis',
     'Preparing your result',
   ];
 
   static const double _ringSize = 160;
 
   int _done = 0; // jumlah langkah yang sudah selesai
-  Timer? _timer;
+  Object? _error;
+  bool _started = false;
+
+  bool _missingDraft = false;
+
+  String? _photoPath;
 
   @override
   void initState() {
     super.initState();
-    // TODO: ganti timer simulasi ini dengan panggilan ke backend (backend/app.py).
-    // Setiap kali satu tahap selesai, panggil setState(() => _done++).
-    // Setelah semua selesai, panggil _finish() dengan hasil asli.
-    _timer = Timer.periodic(const Duration(milliseconds: 1800), (t) {
+    WidgetsBinding.instance.addPostFrameCallback((_) => _save());
+  }
+
+  Future<void> _save() async {
+    if (_started) return;
+    _started = true;
+
+    final draft = ref.read(analysisDraftProvider);
+    if (draft == null || draft.skinType == null) {
       if (!mounted) return;
-      setState(() => _done++);
-      if (_done >= _steps.length) {
-        t.cancel();
-        _finish();
-      }
+      setState(() => _missingDraft = true);
+      return;
+    }
+
+    final repository = ref.read(analysisRepositoryProvider);
+
+    try {
+      setState(() {
+        _error = null;
+        _done = 0;
+      });
+
+      final photoPath = _photoPath ?? await repository.uploadPhoto(draft.photo);
+      if (!mounted) return;
+      setState(() {
+        _photoPath = photoPath;
+        _done = 1;
+      });
+
+      final entry = await repository.save(draft, photoPath: photoPath);
+
+      if (!mounted) return;
+      setState(() => _done = _steps.length);
+
+      ref.read(analysisDraftProvider.notifier).clear();
+      ref.invalidate(analysisHistoryEntriesProvider);
+      ref.invalidate(latestAnalysisEntryProvider);
+
+      context.pushReplacement('/analysis-result', extra: entry);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _error = error;
+        _started = false;
+      });
+    }
+  }
+
+  void _retry() {
+    setState(() {
+      _done = 0;
+      _error = null;
     });
-  }
-
-  Future<void> _finish() async {
-    await Future.delayed(const Duration(milliseconds: 600));
-    if (!mounted) return;
-    context.pushReplacement(
-      '/analysis-result',
-      extra: AnalysisResult.demo(imagePath: widget.imagePath),
-    );
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
+    _save();
   }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final draft = ref.watch(analysisDraftProvider);
     final stepNumber = math.min(_done + 1, _steps.length);
-    final progress = (_done + 0.5) / _steps.length;
+    final progress = _error != null || _missingDraft
+        ? 0.0
+        : (_done + 0.5) / _steps.length;
 
     return Scaffold(
       backgroundColor: scheme.surface,
@@ -90,16 +126,12 @@ class _AnalysisLoadingPageState extends State<AnalysisLoadingPage> {
                     painter: _RingPainter(
                       progress: value,
                       color: scheme.primary,
-                      // `surfaceContainerHighest` rather than `outlineVariant`:
-                      // the variant sits at 1.06:1 against the cream page, so
-                      // the unfilled part of the ring was invisible and the arc
-                      // read as a floating sliver.
                       trackColor: scheme.surfaceContainerHighest,
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(10),
                       child: ClipOval(
-                        child: SkinPhoto(path: widget.imagePath),
+                        child: SkinPhoto(path: draft?.photo?.path),
                       ),
                     ),
                   ),
@@ -110,21 +142,37 @@ class _AnalysisLoadingPageState extends State<AnalysisLoadingPage> {
             const SizedBox(height: AppSpacing.xxxl),
 
             Text(
-              'Analyzing Your Skin',
+              _missingDraft
+                  ? 'Nothing to save'
+                  : (_error == null ? 'Analyzing Your Skin' : 'Could not save'),
               textAlign: TextAlign.center,
               style: BrandText.headline(context, fontSize: 24),
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              'Step $stepNumber of ${_steps.length}, please keep the app '
-              'open.',
+              _missingDraft
+                  ? 'Take a photo first, answer the questions, then come back '
+                        'to this screen.'
+                  : (_error == null
+                        ? 'Step $stepNumber of ${_steps.length}, please keep '
+                              'the app open.'
+                        : 'Your scan is still here. Check your connection and '
+                              'try again.'),
               textAlign: TextAlign.center,
               style: BrandText.body(context),
             ),
 
             const SizedBox(height: AppSpacing.xxl),
 
-            _StepsCard(steps: _steps, done: _done),
+            if (_missingDraft)
+              CustomButton(
+                text: 'Start a scan',
+                onPressed: () => context.go('/camera'),
+              )
+            else if (_error != null)
+              CustomButton(text: 'Try again', onPressed: _retry)
+            else
+              _StepsCard(steps: _steps, done: _done),
           ],
         ),
       ),
