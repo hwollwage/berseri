@@ -49,9 +49,9 @@ class _ClinicsPageState extends ConsumerState<ClinicsPage> {
       ),
       body: clinics.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, _) => Center(
+        error: (error, _) => Center(
           child: FilledButton(
-            onPressed: () => ref.invalidate(nearbyClinicsProvider),
+            onPressed: () => retryNearbyClinics(ref, error),
             child: const Text('Try again'),
           ),
         ),

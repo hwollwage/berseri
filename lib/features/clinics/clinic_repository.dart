@@ -1,97 +1,129 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:geolocator/geolocator.dart';
-import 'package:http/http.dart' as http;
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'clinic.dart';
 
-/// Mengambil klinik di sekitar posisi user dari OpenStreetMap (Overpass API).
-
 class ClinicRepository {
-  ClinicRepository({http.Client? client}) : _client = client ?? http.Client();
+  ClinicRepository({this.client, this.geolocator});
 
-  final http.Client _client;
+  final SupabaseClient? client;
 
-  static const _endpoint = 'https://overpass-api.de/api/interpreter';
+  final GeolocatorPlatform? geolocator;
+
+  static const String _columns = 'id, name, address, phone, rating, location';
 
   Future<List<Clinic>> fetchNearby({
     required double lat,
     required double lng,
-    double radiusKm = 5,
+    double radiusKm = 25,
     int limit = 10,
   }) async {
-    final radius = (radiusKm * 1000).round();
+    final db = client;
+    if (db == null) return const <Clinic>[];
 
-    // Hanya klinik (bukan rumah sakit / apotek).
-    final query = '''
-[out:json][timeout:25];
-(
-  nwr["amenity"="clinic"](around:$radius,$lat,$lng);
-  nwr["healthcare"="clinic"](around:$radius,$lat,$lng);
-);
-out center tags;
-''';
+    final rows = await db
+        .from('clinics')
+        .select(_columns)
+        .eq('is_active', true);
 
-    final res = await _client
-        .post(
-          Uri.parse(_endpoint),
-          headers: {'User-Agent': 'berseri-app/1.0'},
-          body: {'data': query},
-        )
-        .timeout(const Duration(seconds: 30));
-
-    if (res.statusCode != 200) {
-      throw Exception('Gagal memuat klinik (${res.statusCode})');
-    }
-
-    final body =
-        jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
-    final elements = (body['elements'] as List).cast<Map<String, dynamic>>();
-
-    final seen = <String>{};
     final clinics = <Clinic>[];
+    for (final row in (rows as List).cast<Map<String, dynamic>>()) {
+      final point = pointOf(row['location']);
+      if (point == null) continue;
 
-    for (final e in elements) {
-      final tags =
-          (e['tags'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{};
-
-      final name = (tags['name'] as String?)?.trim();
-      if (name == null || name.isEmpty) continue;
-
-      final center = e['center'] as Map<String, dynamic>?;
-      final cLat = ((e['lat'] ?? center?['lat']) as num?)?.toDouble();
-      final cLng = ((e['lon'] ?? center?['lon']) as num?)?.toDouble();
-      if (cLat == null || cLng == null) continue;
-
-      final id = '${e['type']}/${e['id']}';
-      if (!seen.add(id)) continue;
-
-      final meters = Geolocator.distanceBetween(lat, lng, cLat, cLng);
+      final distance =
+          (geolocator?.distanceBetween(lat, lng, point.lat, point.lng) ??
+              Geolocator.distanceBetween(lat, lng, point.lat, point.lng)) /
+          1000;
 
       clinics.add(
         Clinic(
-          id: id,
-          name: name,
-          address: _address(tags),
-          latitude: cLat,
-          longitude: cLng,
-          distanceKm: meters / 1000,
-          phone: (tags['phone'] ?? tags['contact:phone']) as String?,
+          id: row['id'].toString(),
+          name: (row['name'] as String?)?.trim() ?? '',
+          address: (row['address'] as String?)?.trim() ?? '',
+          latitude: point.lat,
+          longitude: point.lng,
+          distanceKm: distance,
+          phone: (row['phone'] as String?)?.trim(),
+          rating: (row['rating'] as num?)?.toDouble(),
         ),
       );
     }
 
+    clinics.removeWhere((clinic) => clinic.name.isEmpty);
     clinics.sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
-    return clinics.take(limit).toList();
+
+    final nearby = clinics.where((c) => c.distanceKm <= radiusKm);
+    final pool = nearby.isEmpty ? clinics : nearby;
+
+    return pool.take(limit).toList(growable: false);
   }
 
-  String _address(Map<String, dynamic> t) {
-    final street = [t['addr:street'], t['addr:housenumber']]
-        .whereType<String>()
-        .join(' ');
-    final parts = [street, t['addr:suburb'], t['addr:city']]
-        .whereType<String>()
-        .where((s) => s.trim().isNotEmpty);
-    return parts.isEmpty ? 'Alamat belum tersedia' : parts.join(', ');
+  static ({double lat, double lng})? _point(Object? raw) {
+    final hex = raw?.toString().trim();
+    if (hex == null || hex.isEmpty) return null;
+
+    final bytes = _tryHex(hex);
+    if (bytes == null || bytes.length < 25) return null;
+
+    final littleEndian = bytes[0] == 1;
+    final data = ByteData.sublistView(bytes);
+    final x = data.getFloat64(9, littleEndian ? Endian.little : Endian.big);
+    final y = data.getFloat64(17, littleEndian ? Endian.little : Endian.big);
+
+    if (x.abs() > 180 || y.abs() > 90) return null;
+    return (lat: y, lng: x);
+  }
+
+  static Uint8List? _tryHex(String hex) {
+    if (hex.length.isOdd) return null;
+    try {
+      return Uint8List.fromList([
+        for (var i = 0; i < hex.length; i += 2)
+          int.parse(hex.substring(i, i + 2), radix: 16),
+      ]);
+    } on FormatException {
+      return null;
+    }
+  }
+
+  static ({double lat, double lng})? _wkt(String raw) {
+    final match = RegExp(
+      r'POINT\s*\(\s*(-?[\d.]+)\s+(-?[\d.]+)\s*\)',
+      caseSensitive: false,
+    ).firstMatch(raw);
+    if (match == null) return null;
+    final lng = double.tryParse(match.group(1)!);
+    final lat = double.tryParse(match.group(2)!);
+    if (lat == null || lng == null) return null;
+    return (lat: lat, lng: lng);
+  }
+
+  static ({double lat, double lng})? _geoJson(Object? raw) {
+    if (raw is! Map) return null;
+    final coordinates = raw['coordinates'];
+    if (coordinates is! List || coordinates.length < 2) return null;
+    final lng = (coordinates[0] as num?)?.toDouble();
+    final lat = (coordinates[1] as num?)?.toDouble();
+    if (lat == null || lng == null) return null;
+    return (lat: lat, lng: lng);
+  }
+
+  static ({double lat, double lng})? pointOf(Object? raw) {
+    if (raw is Map) return _geoJson(raw);
+    final text = raw?.toString().trim();
+    if (text == null || text.isEmpty) return null;
+    if (text.toUpperCase().startsWith('POINT')) return _wkt(text);
+    if (text.startsWith('{')) {
+      try {
+        return _geoJson(jsonDecode(text));
+      } on FormatException {
+        return null;
+      }
+    }
+    return _point(text);
   }
 }

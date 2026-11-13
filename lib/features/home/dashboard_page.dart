@@ -5,10 +5,9 @@ import 'package:berseri/core/components/brand.dart';
 import 'package:berseri/core/components/condition_chip.dart';
 import 'package:berseri/core/components/custom_nav_bar.dart';
 import 'package:berseri/core/components/text_link.dart';
-import 'package:berseri/features/analysis/analysis_history_provider.dart';
-import 'package:berseri/features/analysis/analysis_record.dart';
+import 'package:berseri/features/analysis/analysis_entry.dart';
+import 'package:berseri/features/analysis/analysis_repository.dart';
 import 'package:berseri/features/clinics/nearby_clinics_card.dart';
-import 'package:berseri/features/diagnosis/analysis_result_model.dart';
 import 'package:berseri/features/ingredients/ingredient.dart';
 import 'package:berseri/features/ingredients/ingredient_detail_page.dart';
 import 'package:berseri/features/ingredients/ingredient_repository.dart';
@@ -32,7 +31,6 @@ class DashboardPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final profile = ref.watch(userProfileProvider);
-    final latest = ref.watch(latestAnalysisProvider);
 
     return Scaffold(
       backgroundColor: scheme.surface,
@@ -54,7 +52,7 @@ class DashboardPage extends ConsumerWidget {
                 const SizedBox(height: 24),
                 _ScanCard(onStart: onStartAnalysis),
                 const SizedBox(height: 16),
-                _LatestScanCard(record: latest),
+                _LatestScanCard(),
                 const SizedBox(height: 16),
                 _LibraryCard(onOpen: onOpenIngredients),
                 const SizedBox(height: 16),
@@ -140,16 +138,14 @@ class _ScanCard extends StatelessWidget {
   }
 }
 
-class _LatestScanCard extends StatelessWidget {
-  const _LatestScanCard({required this.record});
-
-  final AnalysisRecord? record;
+class _LatestScanCard extends ConsumerWidget {
+  const _LatestScanCard();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final scan = record;
+    final latest = ref.watch(latestAnalysisEntryProvider);
 
     return _Card(
       child: Column(
@@ -169,10 +165,10 @@ class _LatestScanCard extends StatelessWidget {
                         letterSpacing: -0.2,
                       ),
                     ),
-                    if (scan != null) ...[
+                    if (latest.value case final entry?) ...[
                       const SizedBox(height: 2),
                       Text(
-                        scan.formattedDate,
+                        entry.record.formattedDate,
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: scheme.onSurfaceVariant,
                         ),
@@ -186,64 +182,148 @@ class _LatestScanCard extends StatelessWidget {
           ),
           const SizedBox(height: 18),
 
-          if (scan == null) ...[
-            Text(
-              'No analysis yet',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+          switch (latest) {
+            AsyncData(:final value) => _LatestScanBody(entry: value),
+            AsyncError() => _LatestScanError(
+              onRetry: () => ref.invalidate(latestAnalysisEntryProvider),
             ),
-            const SizedBox(height: 6),
-            Text(
-              'Your skin type and the conditions we find show up here after '
-              'your first scan.',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: scheme.onSurfaceVariant,
-                height: 1.45,
-              ),
-            ),
-          ] else ...[
-            Text('Skin type', style: BrandText.fieldLabel(context)),
-            const SizedBox(height: 4),
-            Text(
-              scan.skinTypeLabel,
-              style: theme.textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.6,
-              ),
-            ),
-
-            if (scan.conditions.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              Text(
-                'Visible conditions',
-                style: BrandText.fieldLabel(context),
-              ),
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final condition in scan.conditions)
-                    ConditionChip(label: condition),
-                ],
-              ),
-            ],
-
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () => context.push(
-                  '/analysis-result',
-                  extra: AnalysisResult.fromRecord(scan),
-                ),
-                child: const Text('See detail result'),
-              ),
-            ),
-          ],
+            _ => const _LatestScanLoading(),
+          },
         ],
       ),
+    );
+  }
+}
+
+class _LatestScanBody extends StatelessWidget {
+  const _LatestScanBody({required this.entry});
+
+  final AnalysisEntry? entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final scan = entry?.record;
+
+    if (scan == null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'No analysis yet',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Your skin type and the conditions we find show up here after '
+            'your first scan.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: scheme.onSurfaceVariant,
+              height: 1.45,
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Skin type', style: BrandText.fieldLabel(context)),
+        const SizedBox(height: 4),
+        Text(
+          scan.skinTypeLabel,
+          style: theme.textTheme.headlineMedium?.copyWith(
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.6,
+          ),
+        ),
+
+        if (scan.conditions.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          Text('Visible conditions', style: BrandText.fieldLabel(context)),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final condition in scan.conditions)
+                ConditionChip(label: condition),
+            ],
+          ),
+        ],
+
+        const SizedBox(height: 20),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton(
+            onPressed: () => context.push(
+              '/analysis-result',
+              extra: entry,
+            ),
+            child: const Text('See detail result'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LatestScanLoading extends StatelessWidget {
+  const _LatestScanLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          SizedBox(width: 12),
+          Expanded(child: Text('Loading your last analysis…')),
+        ],
+      ),
+    );
+  }
+}
+
+class _LatestScanError extends StatelessWidget {
+  const _LatestScanError({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "We couldn't load your last analysis.",
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Check your connection and try again.',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: scheme.onSurfaceVariant,
+            height: 1.45,
+          ),
+        ),
+        const SizedBox(height: 12),
+        FilledButton.tonal(onPressed: onRetry, child: const Text('Retry')),
+      ],
     );
   }
 }

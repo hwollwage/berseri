@@ -2,15 +2,14 @@ import 'package:berseri/core/components/app_radius.dart';
 import 'package:berseri/core/components/app_spacing.dart';
 import 'package:berseri/core/components/brand.dart';
 import 'package:berseri/core/components/text_link.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'clinic.dart';
 import 'nearby_clinics_provider.dart';
 
-// ── Helper: buka Google Maps directions ke koordinat klinik ───────────────────
 Future<void> _openDirections(Clinic clinic) async {
   final uri = Uri.parse(
     'https://www.google.com/maps/dir/?api=1'
@@ -22,7 +21,6 @@ Future<void> _openDirections(Clinic clinic) async {
   }
 }
 
-// ── Helper: buka aplikasi telepon ─────────────────────────────────────────────
 Future<void> _callPhone(String phone) async {
   final uri = Uri(scheme: 'tel', path: phone);
   if (!await launchUrl(uri)) {
@@ -325,7 +323,7 @@ class _ClinicsSkeleton extends StatelessWidget {
 }
 
 Widget _errorView(Object error, WidgetRef ref) {
-  void retry() => ref.invalidate(userPositionProvider);
+  void retry() => retryNearbyClinics(ref, error);
 
   if (error is LocationException) {
     switch (error.issue) {
@@ -333,7 +331,7 @@ Widget _errorView(Object error, WidgetRef ref) {
         return _Message(
           text: 'Turn on location services to see clinics near you.',
           actions: [
-            ('Open settings', Geolocator.openLocationSettings),
+            ('Open settings', openLocationSettingsSafely),
             ('Try again', retry),
           ],
         );
@@ -344,15 +342,25 @@ Widget _errorView(Object error, WidgetRef ref) {
         );
       case LocationIssue.deniedForever:
         return _Message(
-          text: 'Location permission is blocked. Enable it in settings.',
+          text: kIsWeb
+              ? 'Location is blocked for this site. Allow it in your browser '
+                    'and try again.'
+              : 'Location permission is blocked. Enable it in settings.',
           actions: [
-            ('Open settings', Geolocator.openAppSettings),
+            if (!kIsWeb) ('Open settings', openAppSettingsSafely),
             ('Try again', retry),
           ],
+        );
+      case LocationIssue.timeout:
+        return _Message(
+          text: "We couldn't get your location. Move somewhere with a clearer "
+              'view of the sky and try again.',
+          actions: [('Try again', retry)],
         );
     }
   }
 
+  debugPrint('Nearby clinics failed: $error');
   return _Message(
     text: "We couldn't load nearby clinics.",
     actions: [('Try again', retry)],

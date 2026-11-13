@@ -12,26 +12,20 @@ class ClassificationRepository {
   Future<SkinClassification> classifyImage(File image) async {
     final detections = await _onnxService.predict(image);
 
-    if (detections.isEmpty) {
-      return const SkinClassification(
-        label: 'No condition detected',
-        confidence: 0,
-        conditions: [],
-      );
+    final scores = <String, double>{};
+    for (final detection in detections) {
+      final previous = scores[detection.label];
+      if (previous == null || detection.confidence > previous) {
+        scores[detection.label] = detection.confidence;
+      }
     }
 
-    final best = detections.first;
+    final ordered = scores.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
 
-    final conditions = detections
-        .map((detection) => detection.label)
-        .toSet()
-        .toList(growable: false);
-
-    return SkinClassification(
-      label: best.label,
-      confidence: best.confidence,
-      conditions: conditions,
-    );
+    return SkinClassification({
+      for (final entry in ordered) entry.key: entry.value,
+    });
   }
 
   Future<void> dispose() async {

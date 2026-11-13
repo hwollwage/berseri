@@ -2,7 +2,6 @@ import 'package:berseri/core/components/app_back_button.dart';
 import 'package:berseri/core/components/app_radius.dart';
 import 'package:berseri/core/components/app_spacing.dart';
 import 'package:berseri/core/components/brand.dart';
-import 'package:berseri/features/analysis/analysis_history_provider.dart';
 import 'package:berseri/features/auth/auth_errors.dart';
 import 'package:berseri/features/auth/auth_repository.dart';
 import 'package:berseri/features/auth/auth_rules.dart';
@@ -123,8 +122,6 @@ class ProfilePage extends ConsumerWidget {
         context,
       ).showSnackBar(SnackBar(content: Text(authErrorMessage(error))));
     }
-
-    ref.read(analysisHistoryProvider.notifier).clear();
 
     if (!context.mounted) return;
     context.go('/auth/login');
