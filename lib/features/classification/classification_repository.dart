@@ -1,16 +1,17 @@
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:berseri/features/classification/skin_classification.dart';
-import 'package:berseri/features/classification/skin_onnx_service.dart';
+
+import 'package:berseri/features/classification/data/skin_condition_service.dart';
+import 'package:berseri/features/classification/domain/skin_condition_result.dart';
 
 class ClassificationRepository {
-  final SkinOnnxService _onnxService;
+  ClassificationRepository(this._conditionService);
 
-  ClassificationRepository(this._onnxService);
+  final SkinConditionService _conditionService;
 
-  Future<SkinClassification> classifyImage(File image) async {
-    final detections = await _onnxService.predict(image);
+  Future<SkinConditionResult> classifyImage(File image) async {
+    final detections = await _conditionService.predict(image);
 
     final scores = <String, double>{};
     for (final detection in detections) {
@@ -23,24 +24,22 @@ class ClassificationRepository {
     final ordered = scores.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
 
-    return SkinClassification({
+    return SkinConditionResult({
       for (final entry in ordered) entry.key: entry.value,
     });
   }
 
   Future<void> dispose() async {
-    await _onnxService.dispose();
+    await _conditionService.dispose();
   }
 }
 
 final classificationRepositoryProvider = Provider<ClassificationRepository>((
   ref,
 ) {
-  final repository = ClassificationRepository(SkinOnnxService());
+  final repository = ClassificationRepository(SkinConditionService());
 
-  ref.onDispose(() {
-    repository.dispose();
-  });
+  ref.onDispose(repository.dispose);
 
   return repository;
 });

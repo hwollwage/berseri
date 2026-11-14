@@ -13,7 +13,7 @@ import 'package:berseri/features/camera/presentation/widgets/face_guide_overlay.
 import 'package:berseri/features/camera/presentation/widgets/glass_widgets.dart';
 import 'package:berseri/features/camera/presentation/widgets/shutter_button.dart';
 import 'package:berseri/features/classification/classification_provider.dart';
-import 'package:berseri/features/classification/skin_classification.dart';
+import 'package:berseri/features/classification/domain/skin_condition_result.dart';
 
 class CameraPage extends ConsumerStatefulWidget {
   const CameraPage({super.key});
@@ -54,7 +54,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
     setState(() => _saving = true);
 
     try {
-      SkinClassification? classification;
+      SkinConditionResult? classification;
       try {
         classification = await ref.read(classificationProvider.future);
       } catch (_) {
