@@ -5,6 +5,8 @@ import 'package:berseri/features/analysis/history_page.dart';
 import 'package:berseri/features/auth/login_page.dart';
 import 'package:berseri/features/auth/register_page.dart';
 import 'package:berseri/features/camera/presentation/pages/camera_page.dart';
+import 'package:berseri/features/classification/presentation/skin_condition_test_page.dart';
+import 'package:berseri/features/classification/presentation/skin_type_test_page.dart';
 import 'package:berseri/features/clinics/clinics_page.dart';
 import 'package:berseri/features/diagnosis/analysis_loading_page.dart';
 import 'package:berseri/features/diagnosis/analysis_result_page.dart';
@@ -16,7 +18,6 @@ import 'package:berseri/features/onboarding/presentation/onboarding_page.dart';
 import 'package:berseri/features/profile/change_password_page.dart';
 import 'package:berseri/features/profile/profile_page.dart';
 import 'package:berseri/features/questionnaire/presentation/questionnaire_page.dart';
-import 'package:berseri/features/routine/routine_page.dart';
 import 'package:berseri/features/splash/splash_page.dart';
 import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
@@ -56,9 +57,21 @@ String? authRedirect(String path, {required bool signedIn}) {
 }
 
 final router = GoRouter(
-  initialLocation: '/splash',
+  initialLocation: '/dev/skin-type-test', // balikin ke /splash
   refreshListenable: _authStateRefresh,
   routes: [
+    GoRoute(
+      path: '/dev/skin-type-test',
+      name: 'skin-type-test',
+      builder: (context, state) => const SkinTypeTestPage(),
+    ),
+
+    GoRoute(
+      path: '/dev/skin-condition-test',
+      name: 'skin-condition-test',
+      builder: (context, state) => const SkinConditionTestPage(),
+    ),
+
     GoRoute(
       path: '/splash',
       name: 'splash',
@@ -138,12 +151,6 @@ final router = GoRouter(
     ),
 
     GoRoute(
-      path: '/routine',
-      name: 'routine',
-      builder: (context, state) => const RoutinePage(),
-    ),
-
-    GoRoute(
       path: '/questionnaire',
       name: 'questionnaire',
       builder: (context, state) => const QuestionnairePage(),
@@ -158,9 +165,8 @@ final router = GoRouter(
     GoRoute(
       path: '/analysis-result',
       name: 'analysis-result',
-      builder: (context, state) => AnalysisResultPage(
-        entry: state.extra as AnalysisEntry?,
-      ),
+      builder: (context, state) =>
+          AnalysisResultPage(entry: state.extra as AnalysisEntry?),
     ),
 
     GoRoute(

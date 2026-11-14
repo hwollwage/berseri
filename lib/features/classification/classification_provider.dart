@@ -1,20 +1,27 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:berseri/features/classification/skin_classification.dart';
 import 'package:berseri/features/classification/classification_repository.dart';
+import 'package:berseri/features/classification/domain/skin_condition_result.dart';
 
-// masih placeholder
-
-class ClassificationNotifier extends AsyncNotifier<SkinClassification?> {
+class ClassificationNotifier extends AsyncNotifier<SkinConditionResult?> {
   @override
-  Future<SkinClassification?> build() async => null;
+  Future<SkinConditionResult?> build() async => null;
 
   Future<void> classify(File image) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      return ref.read(classificationRepositoryProvider).classifyImage(image);
+      try {
+        return await ref
+            .read(classificationRepositoryProvider)
+            .classifyImage(image);
+      } catch (e, stackTrace) {
+        debugPrint('Classification error: $e');
+        debugPrintStack(stackTrace: stackTrace);
+        rethrow;
+      }
     });
   }
 
@@ -23,4 +30,7 @@ class ClassificationNotifier extends AsyncNotifier<SkinClassification?> {
   }
 }
 
-final classificationProvider = AsyncNotifierProvider<ClassificationNotifier, SkinClassification?>(ClassificationNotifier.new);
+final classificationProvider =
+    AsyncNotifierProvider<ClassificationNotifier, SkinConditionResult?>(
+      ClassificationNotifier.new,
+    );

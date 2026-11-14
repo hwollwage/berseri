@@ -81,6 +81,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/sounds/shutter.mp3
+    - assets/models/skin_type.onnx
     - assets/models/skin_condition.onnx
     - .env
   # fonts:
