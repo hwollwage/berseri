@@ -138,12 +138,6 @@ final router = GoRouter(
     ),
 
     GoRoute(
-      path: '/routine',
-      name: 'routine',
-      builder: (context, state) => const RoutinePage(),
-    ),
-
-    GoRoute(
       path: '/questionnaire',
       name: 'questionnaire',
       builder: (context, state) => const QuestionnairePage(),
@@ -158,9 +152,8 @@ final router = GoRouter(
     GoRoute(
       path: '/analysis-result',
       name: 'analysis-result',
-      builder: (context, state) => AnalysisResultPage(
-        entry: state.extra as AnalysisEntry?,
-      ),
+      builder: (context, state) =>
+          AnalysisResultPage(entry: state.extra as AnalysisEntry?),
     ),
 
     GoRoute(
