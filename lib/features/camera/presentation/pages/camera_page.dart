@@ -61,7 +61,11 @@ class _CameraPageState extends ConsumerState<CameraPage>
         classification = null;
       }
 
-      final photo = ref.read(cameraProvider).asData?.value.imageFile;
+      final cameraImage = ref.read(cameraProvider).asData?.value.imageFile;
+      final croppedFile = classification?.croppedFile;
+      final photo = croppedFile != null
+          ? XFile(croppedFile.path)
+          : cameraImage;
 
       ref
           .read(analysisDraftProvider.notifier)
