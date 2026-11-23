@@ -5,7 +5,9 @@ import 'package:berseri/core/components/brand.dart';
 import 'package:berseri/features/auth/auth_errors.dart';
 import 'package:berseri/features/auth/auth_repository.dart';
 import 'package:berseri/features/auth/auth_rules.dart';
+import 'package:berseri/features/notifications/notification_service.dart';
 import 'package:berseri/features/profile/user_profile_provider.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -42,8 +44,6 @@ class ProfilePage extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: AppSpacing.xxxl),
-
-              // Avatar placeholder
               Container(
                 width: 110,
                 height: 110,
@@ -58,12 +58,8 @@ class ProfilePage extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: AppSpacing.xl),
-
-              // Name
               Text(name, style: BrandText.headline(context, fontSize: 26)),
               const SizedBox(height: AppSpacing.xs),
-
-              // Email
               InkWell(
                 onTap: () => _editEmail(context, ref, email),
                 borderRadius: BorderRadius.circular(AppRadius.control),
@@ -89,14 +85,24 @@ class ProfilePage extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 40),
-
-              // Actions
               const Divider(),
               _MenuItem(
                 icon: Icons.lock_outline,
                 title: 'Change Password',
                 showTrailing: true,
                 onTap: () => context.push('/change-password'),
+              ),
+              const Divider(),
+              _MenuItem(
+                icon: Icons.notifications_outlined,
+                title: 'Scan Reminder',
+                showTrailing: true,
+                onTap: () => showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  showDragHandle: true,
+                  builder: (_) => const _ReminderSheet(),
+                ),
               ),
               const Divider(),
               _MenuItem(
@@ -275,6 +281,118 @@ class _EditEmailDialogState extends State<_EditEmailDialog> {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _ReminderSheet extends StatefulWidget {
+  const _ReminderSheet();
+
+  @override
+  State<_ReminderSheet> createState() => _ReminderSheetState();
+}
+
+class _ReminderSheetState extends State<_ReminderSheet> {
+  static const _options = [1, 2, 3, 5, 7, 14, 30];
+
+  bool _loaded = false;
+  bool _enabled = true;
+  int _days = 3;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final s = await NotificationService.instance.loadSettings();
+    if (!mounted) return;
+    setState(() {
+      _enabled = s.enabled;
+      _days = s.intervalDays;
+      _loaded = true;
+    });
+  }
+
+  Future<void> _save() async {
+    debugPrint('Simpan ditekan: enabled=$_enabled days=$_days');
+    if (_enabled) {
+      await NotificationService.instance.requestPermission();
+    }
+    await NotificationService.instance.saveSettings(
+      ReminderSettings(enabled: _enabled, intervalDays: _days),
+    );
+    if (!mounted) return;
+    Navigator.of(context).pop();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          _enabled
+              ? 'Pengingat diatur setiap $_days hari'
+              : 'Pengingat dimatikan',
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    if (!_loaded) {
+      return const SizedBox(
+        height: 200,
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.gutter,
+        0,
+        AppSpacing.gutter,
+        AppSpacing.gutter + MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Pengingat Scan Wajah', style: theme.textTheme.titleLarge),
+          const SizedBox(height: AppSpacing.md),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Aktifkan pengingat'),
+            value: _enabled,
+            onChanged: (v) => setState(() => _enabled = v),
+          ),
+          if (_enabled) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'Ingatkan jika tidak scan selama:',
+              style: theme.textTheme.bodyMedium,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final d in _options)
+                  ChoiceChip(
+                    label: Text('$d hari'),
+                    selected: _days == d,
+                    onSelected: (_) => setState(() => _days = d),
+                  ),
+              ],
+            ),
+          ],
+          const SizedBox(height: AppSpacing.xl),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(onPressed: _save, child: const Text('Simpan')),
+          ),
+        ],
+      ),
     );
   }
 }

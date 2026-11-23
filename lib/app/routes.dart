@@ -57,6 +57,7 @@ String? authRedirect(String path, {required bool signedIn}) {
 }
 
 final router = GoRouter(
+  initialLocation: '/splash',
   initialLocation: '/splash', // balikin ke /splash
   // initialLocation: '/dev/skin-type-tes', 
   refreshListenable: _authStateRefresh,
