@@ -3,7 +3,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 
+import 'package:berseri/features/classification/data/face_detector_service.dart';
 import 'package:berseri/features/classification/data/skin_type_service.dart';
 import 'package:berseri/features/classification/domain/skin_type_result.dart';
 
@@ -15,12 +17,15 @@ class SkinTypeTestPage extends StatefulWidget {
 }
 
 class _SkinTypeTestPageState extends State<SkinTypeTestPage> {
-  final SkinTypeService _service = SkinTypeService();
+  final FaceDetectorService _faceDetector = FaceDetectorService();
+  final SkinTypeService _skinType = SkinTypeService();
   final ImagePicker _picker = ImagePicker();
 
-  File? _imageFile;
+  File? _originalFile;
+  File? _croppedFile; // wajah yang di-crop, diumpan ke model
   SkinTypeResult? _result;
   String? _error;
+  String? _statusMessage;
   bool _isLoading = false;
 
   Future<void> _pickAndPredict(ImageSource source) async {
@@ -30,33 +35,69 @@ class _SkinTypeTestPageState extends State<SkinTypeTestPage> {
       maxHeight: 1280,
       imageQuality: 85,
     );
-
     if (picked == null || !mounted) return;
 
     setState(() {
-      _imageFile = File(picked.path);
+      _originalFile = File(picked.path);
+      _croppedFile = null;
       _result = null;
       _error = null;
+      _statusMessage = 'Mendeteksi wajah...';
       _isLoading = true;
     });
 
     try {
-      final result = await _service.predict(_imageFile!);
+      // 1. Deteksi & crop wajah
+      final detection = await _faceDetector.detect(_originalFile!);
+
       if (!mounted) return;
-      setState(() => _result = result);
-    } catch (e, stackTrace) {
-      debugPrint('[skin_type] error: $e');
-      debugPrintStack(stackTrace: stackTrace);
+
+      if (detection == null) {
+        setState(() {
+          _error = 'Tidak ada wajah terdeteksi.\nCoba foto yang lebih jelas.';
+          _isLoading = false;
+          _statusMessage = null;
+        });
+        return;
+      }
+
+      // Simpan crop ke file sementara supaya bisa ditampilkan dan diumpan model.
+      final tmp = await getTemporaryDirectory();
+      final cropFile = File(
+        '${tmp.path}/face_crop_${DateTime.now().millisecondsSinceEpoch}.jpg',
+      );
+      await cropFile.writeAsBytes(detection.croppedBytes);
+
+      if (!mounted) return;
+      setState(() {
+        _croppedFile = cropFile;
+        _statusMessage = 'Menganalisis tipe kulit...';
+      });
+
+      // 2. Jalankan model dengan hasil crop
+      final result = await _skinType.predict(cropFile);
+
+      if (!mounted) return;
+      setState(() {
+        _result = result;
+        _statusMessage = null;
+      });
+    } catch (e, st) {
+      debugPrint('[skin_type_test] error: $e');
+      debugPrintStack(stackTrace: st);
       if (!mounted) return;
       setState(() => _error = '$e');
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
   @override
   void dispose() {
-    _service.dispose();
+    _faceDetector.dispose();
+    _skinType.dispose();
     super.dispose();
   }
 
@@ -79,57 +120,88 @@ class _SkinTypeTestPageState extends State<SkinTypeTestPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (_imageFile != null) ...[
-              Image.file(_imageFile!, height: 280, fit: BoxFit.contain),
+            // Tampilkan crop wajah kalau ada, fallback ke foto asli
+            if (_croppedFile != null) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.file(
+                  _croppedFile!,
+                  height: 220,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Wajah ter-crop',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
+              ),
+              const SizedBox(height: 20),
+            ] else if (_originalFile != null) ...[
+              Image.file(_originalFile!, height: 220, fit: BoxFit.contain),
               const SizedBox(height: 20),
             ],
-            if (_isLoading)
-              const Center(child: CircularProgressIndicator())
-            else if (_error != null)
+
+            if (_isLoading) ...[
+              const Center(child: CircularProgressIndicator()),
+              if (_statusMessage != null) ...[
+                const SizedBox(height: 12),
+                Text(_statusMessage!, textAlign: TextAlign.center),
+              ],
+            ] else if (_error != null)
               Text(
-                'Gagal:\n$_error',
+                _error!,
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.error,
+                ),
               )
             else if (result != null)
-              for (final entry in result.scores.entries)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Column(
+                children: [
+                  for (final entry in result.scores.entries)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(entry.key),
-                          Text('${(entry.value * 100).toStringAsFixed(1)}%'),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(entry.key),
+                              Text(
+                                '${(entry.value * 100).toStringAsFixed(1)}%',
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          LinearProgressIndicator(
+                            value: entry.value.clamp(0.0, 1.0),
+                          ),
                         ],
                       ),
-                      const SizedBox(height: 4),
-                      LinearProgressIndicator(
-                        value: entry.value.clamp(0.0, 1.0),
-                      ),
-                    ],
-                  ),
-                )
+                    ),
+                ],
+              )
             else
               const Text(
                 'Pilih gambar untuk menguji model skin type',
                 textAlign: TextAlign.center,
               ),
+
             const SizedBox(height: 20),
             FilledButton.icon(
-              onPressed: _isLoading
-                  ? null
-                  : () => _pickAndPredict(ImageSource.gallery),
+              onPressed:
+                  _isLoading ? null : () => _pickAndPredict(ImageSource.gallery),
               icon: const Icon(Icons.photo_library),
               label: const Text('Pilih dari Galeri'),
             ),
             const SizedBox(height: 8),
             OutlinedButton.icon(
-              onPressed: _isLoading
-                  ? null
-                  : () => _pickAndPredict(ImageSource.camera),
+              onPressed:
+                  _isLoading ? null : () => _pickAndPredict(ImageSource.camera),
               icon: const Icon(Icons.camera_alt),
               label: const Text('Ambil Foto'),
             ),

@@ -2,7 +2,9 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 
+import 'package:berseri/features/classification/data/face_detector_service.dart';
 import 'package:berseri/features/classification/data/skin_condition_service.dart';
 
 class SkinConditionTestPage extends StatefulWidget {
@@ -13,13 +15,15 @@ class SkinConditionTestPage extends StatefulWidget {
 }
 
 class _SkinConditionTestPageState extends State<SkinConditionTestPage> {
+  final FaceDetectorService _faceDetector = FaceDetectorService();
   final SkinConditionService _service = SkinConditionService();
   final ImagePicker _picker = ImagePicker();
 
-  File? _imageFile;
-
+  File? _originalFile;
+  File? _croppedFile;
   Map<String, double>? _scores;
   String? _error;
+  String? _statusMessage;
   bool _isLoading = false;
 
   Future<void> _pickAndPredict(ImageSource source) async {
@@ -32,17 +36,47 @@ class _SkinConditionTestPageState extends State<SkinConditionTestPage> {
     if (picked == null || !mounted) return;
 
     setState(() {
-      _imageFile = File(picked.path);
+      _originalFile = File(picked.path);
+      _croppedFile = null;
       _scores = null;
       _error = null;
+      _statusMessage = 'Mendeteksi wajah...';
       _isLoading = true;
     });
 
     try {
-      final detections = await _service.predict(_imageFile!);
+      // 1. Deteksi & crop wajah
+      final detection = await _faceDetector.detect(_originalFile!);
+
       if (!mounted) return;
 
-      // Deduplikasi: ambil confidence tertinggi per label.
+      if (detection == null) {
+        setState(() {
+          _error = 'Tidak ada wajah terdeteksi.\nCoba foto yang lebih jelas.';
+          _isLoading = false;
+          _statusMessage = null;
+        });
+        return;
+      }
+
+      final tmp = await getTemporaryDirectory();
+      final cropFile = File(
+        '${tmp.path}/face_crop_${DateTime.now().millisecondsSinceEpoch}.jpg',
+      );
+      await cropFile.writeAsBytes(detection.croppedBytes);
+
+      if (!mounted) return;
+      setState(() {
+        _croppedFile = cropFile;
+        _statusMessage = 'Menganalisis kondisi kulit...';
+      });
+
+      // 2. Jalankan model dengan hasil crop
+      final detections = await _service.predict(cropFile);
+
+      if (!mounted) return;
+
+      // Deduplikasi: 1 entry per label, confidence tertinggi.
       final map = <String, double>{};
       for (final d in detections) {
         final prev = map[d.label];
@@ -52,9 +86,12 @@ class _SkinConditionTestPageState extends State<SkinConditionTestPage> {
         map.entries.toList()..sort((a, b) => b.value.compareTo(a.value)),
       );
 
-      setState(() => _scores = sorted);
+      setState(() {
+        _scores = sorted;
+        _statusMessage = null;
+      });
     } catch (e, st) {
-      debugPrint('[skin_condition] error: $e');
+      debugPrint('[skin_condition_test] error: $e');
       debugPrintStack(stackTrace: st);
       if (!mounted) return;
       setState(() => _error = '$e');
@@ -65,6 +102,7 @@ class _SkinConditionTestPageState extends State<SkinConditionTestPage> {
 
   @override
   void dispose() {
+    _faceDetector.dispose();
     _service.dispose();
     super.dispose();
   }
@@ -80,15 +118,38 @@ class _SkinConditionTestPageState extends State<SkinConditionTestPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (_imageFile != null) ...[
-              Image.file(_imageFile!, height: 280, fit: BoxFit.contain),
+            if (_croppedFile != null) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.file(
+                  _croppedFile!,
+                  height: 220,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Wajah ter-crop',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
+              ),
+              const SizedBox(height: 20),
+            ] else if (_originalFile != null) ...[
+              Image.file(_originalFile!, height: 220, fit: BoxFit.contain),
               const SizedBox(height: 20),
             ],
-            if (_isLoading)
-              const Center(child: CircularProgressIndicator())
-            else if (_error != null)
+
+            if (_isLoading) ...[
+              const Center(child: CircularProgressIndicator()),
+              if (_statusMessage != null) ...[
+                const SizedBox(height: 12),
+                Text(_statusMessage!, textAlign: TextAlign.center),
+              ],
+            ] else if (_error != null)
               Text(
-                'Gagal:\n$_error',
+                _error!,
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               )
@@ -100,8 +161,6 @@ class _SkinConditionTestPageState extends State<SkinConditionTestPage> {
                     )
                   : Column(
                       children: [
-                        // Tampilkan semua 4 label — yang tidak terdeteksi
-                        // akan muncul dengan skor 0 supaya mudah dibandingkan.
                         for (final label in SkinConditionService.labels)
                           _ConditionBar(
                             label: label,
@@ -115,19 +174,18 @@ class _SkinConditionTestPageState extends State<SkinConditionTestPage> {
                 'Pilih gambar untuk menguji model skin condition',
                 textAlign: TextAlign.center,
               ),
+
             const SizedBox(height: 20),
             FilledButton.icon(
-              onPressed: _isLoading
-                  ? null
-                  : () => _pickAndPredict(ImageSource.gallery),
+              onPressed:
+                  _isLoading ? null : () => _pickAndPredict(ImageSource.gallery),
               icon: const Icon(Icons.photo_library),
               label: const Text('Pilih dari Galeri'),
             ),
             const SizedBox(height: 8),
             OutlinedButton.icon(
-              onPressed: _isLoading
-                  ? null
-                  : () => _pickAndPredict(ImageSource.camera),
+              onPressed:
+                  _isLoading ? null : () => _pickAndPredict(ImageSource.camera),
               icon: const Icon(Icons.camera_alt),
               label: const Text('Ambil Foto'),
             ),
@@ -166,7 +224,8 @@ class _ConditionBar extends StatelessWidget {
                 label,
                 style: TextStyle(
                   color: detected ? null : colorScheme.outline,
-                  fontWeight: detected ? FontWeight.w600 : FontWeight.normal,
+                  fontWeight:
+                      detected ? FontWeight.w600 : FontWeight.normal,
                 ),
               ),
               Text(
