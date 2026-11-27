@@ -3,11 +3,13 @@ class AnalysisRecord {
     required this.date,
     required this.skinType,
     this.conditions = const <String>[],
+    this.conditionScores = const <String, double>{},
   });
 
   final DateTime date;
   final String skinType;
   final List<String> conditions;
+  final Map<String, double> conditionScores;
 
   static const List<String> _months = <String>[
     'Jan',

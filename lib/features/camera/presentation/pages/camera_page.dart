@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:berseri/features/analysis/analysis_draft.dart';
 import 'package:berseri/features/analysis/analysis_repository.dart';
+import 'package:berseri/features/questionnaire/models/skin_type.dart';
 import 'package:berseri/features/camera/presentation/providers/camera_providers.dart';
 import 'package:berseri/features/camera/presentation/widgets/analysis_loading_overlay.dart';
 import 'package:berseri/features/camera/presentation/widgets/captured_photo.dart';
@@ -13,7 +14,7 @@ import 'package:berseri/features/camera/presentation/widgets/face_guide_overlay.
 import 'package:berseri/features/camera/presentation/widgets/glass_widgets.dart';
 import 'package:berseri/features/camera/presentation/widgets/shutter_button.dart';
 import 'package:berseri/features/classification/classification_provider.dart';
-import 'package:berseri/features/classification/domain/skin_condition_result.dart';
+import 'package:berseri/features/classification/domain/classification_result.dart';
 
 class CameraPage extends ConsumerStatefulWidget {
   const CameraPage({super.key});
@@ -54,7 +55,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
     setState(() => _saving = true);
 
     try {
-      SkinConditionResult? classification;
+      ClassificationResult? classification;
       try {
         classification = await ref.read(classificationProvider.future);
       } catch (_) {
@@ -63,19 +64,21 @@ class _CameraPageState extends ConsumerState<CameraPage>
 
       final cameraImage = ref.read(cameraProvider).asData?.value.imageFile;
       final croppedFile = classification?.croppedFile;
-      final photo = croppedFile != null
-          ? XFile(croppedFile.path)
-          : cameraImage;
+      final photo = croppedFile != null ? XFile(croppedFile.path) : cameraImage;
 
-      ref
-          .read(analysisDraftProvider.notifier)
-          .start(
-            AnalysisDraft(
-              photo: photo,
-              conditionScores:
-                  classification?.conditionScores ?? const <String, double>{},
-            ),
-          );
+      ref.read(analysisDraftProvider.notifier).start(
+        AnalysisDraft(
+          photo: photo,
+          conditionScores: classification?.conditionScores ?? const {},
+          skinType: classification?.skinType != null
+              ? SkinType.values.firstWhere(
+                  (t) => t.value == classification!.skinType,
+                  orElse: () => SkinType.normal,
+                )
+              : null,
+          skinTypeConfidence: classification?.skinTypeConfidence,
+        ),
+      );
 
       await ref.read(cameraProvider.notifier).confirmPicture();
 

@@ -36,6 +36,7 @@ class AnalysisEntry {
         date: _createdAt(row['created_at']),
         skinType: (row['skin_type'] as String?)?.trim() ?? '',
         conditions: _visibleConditions(row['conditions']),
+        conditionScores: _conditionScoresMap(row['conditions']),
       ),
       skinTypeConfidence: (row['skin_type_confidence'] as num?)?.toDouble(),
       ingredients: _ingredients(row, ingredientsById),
@@ -146,6 +147,19 @@ class AnalysisEntry {
     } on FormatException {
       return null;
     }
+  }
+
+  static Map<String, double> _conditionScoresMap(Object? raw) {
+    if (raw is! Map) return const {};
+    final result = <String, double>{};
+    raw.forEach((key, value) {
+      final label = key?.toString().trim() ?? '';
+      final score = _score(value);
+      if (label.isNotEmpty && score != null) {
+        result[_label(label)] = score > 1 ? score / 100 : score;
+      }
+    });
+    return result;
   }
 
   static List<IngredientSummary> _ingredients(
