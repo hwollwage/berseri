@@ -47,35 +47,27 @@ class _SkinTypeTestPageState extends State<SkinTypeTestPage> {
     });
 
     try {
-      // 1. Deteksi & crop wajah
-      final detection = await _faceDetector.detect(_originalFile!);
+      File inputFile = _originalFile!;
 
+      final detection = await _faceDetector.detect(_originalFile!);
       if (!mounted) return;
 
-      if (detection == null) {
+      if (detection != null) {
+        final tmp = await getTemporaryDirectory();
+        final cropFile = File(
+          '${tmp.path}/face_crop_${DateTime.now().millisecondsSinceEpoch}.jpg',
+        );
+        await cropFile.writeAsBytes(detection.croppedBytes);
+        inputFile = cropFile;
         setState(() {
-          _error = 'Tidak ada wajah terdeteksi.\nCoba foto yang lebih jelas.';
-          _isLoading = false;
-          _statusMessage = null;
+          _croppedFile = cropFile;
+          _statusMessage = 'Menganalisis tipe kulit...';
         });
-        return;
+      } else {
+        setState(() => _statusMessage = 'Menganalisis tipe kulit...');
       }
 
-      // Simpan crop ke file sementara supaya bisa ditampilkan dan diumpan model.
-      final tmp = await getTemporaryDirectory();
-      final cropFile = File(
-        '${tmp.path}/face_crop_${DateTime.now().millisecondsSinceEpoch}.jpg',
-      );
-      await cropFile.writeAsBytes(detection.croppedBytes);
-
-      if (!mounted) return;
-      setState(() {
-        _croppedFile = cropFile;
-        _statusMessage = 'Menganalisis tipe kulit...';
-      });
-
-      // 2. Jalankan model dengan hasil crop
-      final result = await _skinType.predict(cropFile);
+      final result = await _skinType.predict(inputFile);
 
       if (!mounted) return;
       setState(() {

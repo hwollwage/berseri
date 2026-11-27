@@ -5,15 +5,21 @@ import 'package:path_provider/path_provider.dart';
 
 import 'package:berseri/features/classification/data/face_detector_service.dart';
 import 'package:berseri/features/classification/data/skin_condition_service.dart';
-import 'package:berseri/features/classification/domain/skin_condition_result.dart';
+import 'package:berseri/features/classification/data/skin_type_service.dart';
+import 'package:berseri/features/classification/domain/classification_result.dart';
 
 class ClassificationRepository {
-  ClassificationRepository(this._faceDetector, this._conditionService);
+  ClassificationRepository(
+    this._faceDetector,
+    this._skinTypeService,
+    this._conditionService,
+  );
 
   final FaceDetectorService _faceDetector;
+  final SkinTypeService _skinTypeService;
   final SkinConditionService _conditionService;
 
-  Future<SkinConditionResult> classifyImage(File image) async {
+  Future<ClassificationResult> classifyImage(File image) async {
     File inputFile = image;
     File? croppedFile;
 
@@ -29,25 +35,28 @@ class ClassificationRepository {
       }
     } catch (_) {}
 
-    final detections = await _conditionService.predict(inputFile);
+    final skinTypeResult = await _skinTypeService.predict(inputFile);
+    final conditionDetections = await _conditionService.predict(inputFile);
 
     final scores = <String, double>{};
-    for (final d in detections) {
+    for (final d in conditionDetections) {
       final prev = scores[d.label];
       if (prev == null || d.confidence > prev) scores[d.label] = d.confidence;
     }
-
     final ordered = scores.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
 
-    return SkinConditionResult(
-      {for (final entry in ordered) entry.key: entry.value},
+    return ClassificationResult(
+      skinType: skinTypeResult.topLabel,
+      skinTypeConfidence: skinTypeResult.topScore,
+      conditionScores: {for (final e in ordered) e.key: e.value},
       croppedFile: croppedFile,
     );
   }
 
   Future<void> dispose() async {
     await _faceDetector.dispose();
+    await _skinTypeService.dispose();
     await _conditionService.dispose();
   }
 }
@@ -57,6 +66,7 @@ final classificationRepositoryProvider = Provider<ClassificationRepository>((
 ) {
   final repository = ClassificationRepository(
     FaceDetectorService(),
+    SkinTypeService(),
     SkinConditionService(),
   );
   ref.onDispose(repository.dispose);

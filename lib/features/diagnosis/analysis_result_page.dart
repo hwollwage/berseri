@@ -2,7 +2,6 @@ import 'package:berseri/core/components/app_back_button.dart';
 import 'package:berseri/core/components/app_radius.dart';
 import 'package:berseri/core/components/app_spacing.dart';
 import 'package:berseri/core/components/brand.dart';
-import 'package:berseri/core/components/condition_chip.dart';
 import 'package:berseri/features/analysis/analysis_entry.dart';
 import 'package:berseri/features/diagnosis/widgets/skin_photo.dart';
 import 'package:flutter/material.dart';
@@ -176,7 +175,10 @@ class _ResultView extends StatelessWidget {
                   runSpacing: 8,
                   children: [
                     for (final condition in record.conditions)
-                      ConditionChip(label: condition, onPage: true),
+                      _ConditionChipWithScore(
+                        label: condition,
+                        score: record.conditionScores[condition],
+                      ),
                   ],
                 ),
 
@@ -227,6 +229,49 @@ class _PhotoCard extends StatelessWidget {
             child: SkinPhoto(url: url),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _ConditionChipWithScore extends StatelessWidget {
+  const _ConditionChipWithScore({required this.label, this.score});
+
+  final String label;
+  final double? score;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final scoreText = score != null
+        ? ' - ${(score! * 100).toStringAsFixed(1)}%'
+        : '';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+          if (scoreText.isNotEmpty)
+            Text(
+              scoreText,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w500,
+                  ),
+            ),
+        ],
       ),
     );
   }

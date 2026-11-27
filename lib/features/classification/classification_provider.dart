@@ -1,36 +1,25 @@
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:berseri/features/classification/classification_repository.dart';
-import 'package:berseri/features/classification/domain/skin_condition_result.dart';
+import 'package:berseri/features/classification/domain/classification_result.dart';
 
-class ClassificationNotifier extends AsyncNotifier<SkinConditionResult?> {
+class ClassificationNotifier extends AsyncNotifier<ClassificationResult?> {
   @override
-  Future<SkinConditionResult?> build() async => null;
+  Future<ClassificationResult?> build() async => null;
 
   Future<void> classify(File image) async {
     state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
-      try {
-        return await ref
-            .read(classificationRepositoryProvider)
-            .classifyImage(image);
-      } catch (e, stackTrace) {
-        debugPrint('Classification error: $e');
-        debugPrintStack(stackTrace: stackTrace);
-        rethrow;
-      }
-    });
+    state = await AsyncValue.guard(
+      () => ref.read(classificationRepositoryProvider).classifyImage(image),
+    );
   }
 
-  void reset() {
-    state = const AsyncData(null);
-  }
+  void reset() => state = const AsyncData(null);
 }
 
 final classificationProvider =
-    AsyncNotifierProvider<ClassificationNotifier, SkinConditionResult?>(
+    AsyncNotifierProvider<ClassificationNotifier, ClassificationResult?>(
       ClassificationNotifier.new,
     );
